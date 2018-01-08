@@ -79,6 +79,9 @@ symTableElement *
 #define CONVERSION_FACTOR_ACC 0.01
 #define K 1
 #define K_ACC 0.001
+#define KP 0.03
+
+
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -118,7 +121,7 @@ typedef struct{//input
 		double startpos;
 	      }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn};
+enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter};
 
 void update_motcon(motiontype *p);
 
@@ -146,7 +149,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_end};
+enum {ms_init,ms_fwd,ms_turn,ms_followLineCenter,ms_end};
 
 int main()
 {
@@ -303,6 +306,11 @@ while (running){
 	}
     break;
 
+	case ms_followLineCenter:
+		if (followLineCenter(dist,0.3,mission.time)) mission.state = ms_end;
+	break;
+
+
     case ms_end:
       mot.cmd=mot_stop;
       running=0;
@@ -428,36 +436,35 @@ if (p->cmd !=0){
 	p->curcmd=mot_turn;
       break;
     }
-
     p->cmd=0;
   }
 
   switch (p->curcmd){
     case mot_stop:
-      p->motorspeed_l=0;
-      p->motorspeed_r=0;
+	      p->motorspeed_l=0;
+		  p->motorspeed_r=0;
     break;
 
     case mot_move:
-      d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
+		  d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
 
-      if ((p->right_pos+p->left_pos)/2- p->startpos >= p->dist){
-	p->finished=1;
-	p->motorspeed_l=0;
-	p->motorspeed_r=0;
-      }
-      else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist-d){ // Deacceleration
-	p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
-	p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
-      }
-      else if(p->motorspeed_l<p->speedcmd){                           // Acceleration
-	p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
-	p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
-      }
-      else {
-	p->motorspeed_l=p->speedcmd - K*(odo.theta_ref - odo.theta);
-	p->motorspeed_r=p->speedcmd + K*(odo.theta_ref - odo.theta);
-      }
+		  if ((p->right_pos+p->left_pos)/2- p->startpos >= p->dist){
+		p->finished=1;
+		p->motorspeed_l=0;
+		p->motorspeed_r=0;
+		  }
+		  else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist-d){ // Deacceleration
+		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
+		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
+		  }
+		  else if(p->motorspeed_l<p->speedcmd){                           // Acceleration
+		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
+		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
+		  }
+		  else {
+		p->motorspeed_l=p->speedcmd - K*(odo.theta_ref - odo.theta);
+		p->motorspeed_r=p->speedcmd + K*(odo.theta_ref - odo.theta);
+		  }
     break;
 
     case mot_turn:
@@ -482,7 +489,7 @@ if (p->cmd !=0){
 	    p->motorspeed_l=-(p->speedcmd);
 	  }
 	}
-	else { 				//Turn right
+	  else { 				//Turn right
 	  d_angle=p->motorspeed_l*p->motorspeed_l/(AJAX*p->w);
 
 	  if(p->left_pos - p->startpos >= - p->angle*p->w/2){
@@ -504,6 +511,18 @@ if (p->cmd !=0){
 	  }
 	}
     break;
+
+	case mot_followLineCenter:
+		if (p->right_pos < p->dist) {
+			p->motorspeed_l = p->speedcmd + KP*(minIntensity(linesensor, 8) - 3.5);
+			p->motorspeed_r = p->speedcmd - KP*(minIntensity(linesensor, 8) - 3.5);
+		}
+		else {
+			p->motorspeed_l = 0;
+			p->motorspeed_r = 0;
+			p->finished = 1;
+		}
+	break;
   }
 }
 
@@ -530,30 +549,16 @@ int turn(double angle, double speed,int time){
   else
     return mot.finished;
 }
-/*int follow_line(int* line*, double speed, int time){   // Linesensor input???
-  int size = 0, index;
+int followLineCenter(double dist, double speed, int time){   // linesensor input???
   if(time == 0){
-  //  mot.cmd = mot_follow_line;
-    mot.speedcmd = speed;
-      size = sizeof(line)/sizeof(line[0]);
-      index = minIntensity(int* line, int size);
-
-      index < 4 ? (
-          mot.
-          p->motorspeed_r=p->speedcmd;
-          p->motorspeed_l=p->speedcmd
-        ):(
-
-        )
-
-
-
+	mot.cmd = mot_followLineCenter;
+	mot.speedcmd = speed;
+	mot.dist = dist;
     return 0;
-  }
-  else
-    return mot.finished;
+  }	
+  else return mot.finished;
 }
-*/
+
 
 void sm_update(smtype *p){
   if (p->state!=p->oldstate){
