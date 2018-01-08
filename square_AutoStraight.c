@@ -80,7 +80,7 @@ symTableElement *
 #define K 1
 #define K_ACC 0.001
 #define KP 0.03
-
+#define NUMBER_OF_IRSENSORS 8
 
 
 typedef struct{ //input signals
@@ -128,9 +128,10 @@ void update_motcon(motiontype *p);
 
 int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
+int followLineCenter(double dist, double speed, int time);
 
 void transform(int* input, double* output, int size); // Calibfunction.
-int minIntensity(int* input, int size);            // Minimum intensity function
+int minIntensity();            // Minimum intensity function
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 
 typedef struct{
@@ -569,18 +570,19 @@ void sm_update(smtype *p){
     p->time++;
   }
 }
-void transform(int* input, double* output, int size){
+/*void transform(int* input, double* output, int size){
 int i;
   for(i=0;i < size; i++){
     output[i]=1-scale[i]*(input[i]-black_mean[i]);
   }
-}
-int minIntensity(int* input, int size){
+}*/
+int minIntensity(){
   int i, index = 0;
-  int min = input[0];
-    for(i = 1; i < size; i++){
-      if(input[i]< min){
-        min = input[i];
+  int min; 
+  min = (int)linesensor->data[0];
+    for(i = 1; i < NUMBER_OF_IRSENSORS; i++){
+      if(linesensor->data[i]< min){
+        min = linesensor->data[i];
         index = i;
       }
     }
