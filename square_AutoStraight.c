@@ -79,6 +79,7 @@ symTableElement *
 #define SIZE_OF_ARRAY 10000
 #define CONVERSION_FACTOR_ACC 0.01
 #define K 1
+#define K_ACC 0.001
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -395,7 +396,7 @@ void update_odo(odotype *p)
 
   delta_u = ((double)delta_r * p->cr + (double)delta_l * p->cl)/2;
   delta_theta = ((double)delta_r * p->cr - (double)delta_l * p->cl)/(double)p->w;
-  p->theta -= delta_theta;
+  p->theta += delta_theta;
   p->xpos += delta_u*cos(p->theta);
   p->ypos -= delta_u*sin(p->theta);
 
@@ -447,16 +448,16 @@ if (p->cmd !=0){
 	p->motorspeed_r=0;
       }
       else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist-d){ // Deacceleration
-	p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
-	p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
+	p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
+	p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
       }
       else if(p->motorspeed_l<p->speedcmd){                           // Acceleration
-	p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
-	p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
+	p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
+	p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
       }
       else {
-	p->motorspeed_l=p->speedcmd + K*(odo.theta_ref - odo.theta);
-	p->motorspeed_r=p->speedcmd - K*(odo.theta_ref - odo.theta);
+	p->motorspeed_l=p->speedcmd - K*(odo.theta_ref - odo.theta);
+	p->motorspeed_r=p->speedcmd + K*(odo.theta_ref - odo.theta);
       }
     break;
 
@@ -526,7 +527,7 @@ int turn(double angle, double speed,int time){
     mot.speedcmd=speed;
     mot.angle=angle;
     mot.start_angle=odo.theta;
-    odo.theta_ref = odo.theta_ref - angle;
+    odo.theta_ref = odo.theta_ref + angle;
     return 0;
   }
   else
