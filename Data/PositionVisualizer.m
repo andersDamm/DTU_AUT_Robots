@@ -1,4 +1,4 @@
-A = importdata('Log_acc_calib.dat',',');
+A = importdata('Log.dat',',');
 
 ax1 = subplot(2,2,1);
 ax2 = subplot(2,2,2);
