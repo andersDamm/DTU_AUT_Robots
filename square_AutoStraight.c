@@ -72,7 +72,7 @@ symTableElement *
 * odometry
 */
 #define WHEEL_DIAMETER   0.067	/* m */
-#define WHEEL_SEPARATION 0.252	/* m */
+#define WHEEL_SEPARATION 0.282	/* m 0.252 */
 #define DELTA_M (M_PI * WHEEL_DIAMETER / 2000)
 #define ROBOTPORT	24902
 #define AJAX 0.5 /* m/s² */
@@ -405,57 +405,54 @@ void update_odo(odotype *p)
 
 void update_motcon(motiontype *p){
 
-  double d, d_angle;
+ 	double d, d_angle;
 
-if (p->cmd !=0){
+	if (p->cmd !=0){
 
-    p->finished=0;
-    switch (p->cmd){
+		p->finished=0;
+		switch (p->cmd){
+		case mot_stop:
+	  		p->curcmd=mot_stop;
+	  		break;
+  		case mot_move:
+	  		p->startpos=(p->left_pos+p->right_pos)/2;
+	  		p->curcmd=mot_move;
+	  		break;
+
+	  	case mot_turn:
+			if (p->angle > 0)
+				p->startpos=p->right_pos;
+			else
+				p->startpos=p->left_pos;
+				p->curcmd=mot_turn;
+		  		break;
+		}
+		p->cmd=0;
+	}
+
+  	switch (p->curcmd){
     case mot_stop:
-      p->curcmd=mot_stop;
-      break;
-      case mot_move:
-      p->startpos=(p->left_pos+p->right_pos)/2;
-      p->curcmd=mot_move;
-      break;
-
-      case mot_turn:
-	if (p->angle > 0)
-	    p->startpos=p->right_pos;
-	else
-	    p->startpos=p->left_pos;
-	p->curcmd=mot_turn;
-      break;
-
-
-    }
-
-    p->cmd=0;
-  }
-
-  switch (p->curcmd){
-    case mot_stop:
-      p->motorspeed_l=0;
-      p->motorspeed_r=0;
+      	p->motorspeed_l=0;
+      	p->motorspeed_r=0;
     break;
 
     case mot_move:
-      d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
+  		d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
 
-      if ((p->right_pos+p->left_pos)/2- p->startpos >= p->dist){
-	p->finished=1;
-	p->motorspeed_l=0;
-	p->motorspeed_r=0;
-      }
-      else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist-d){ // Deacceleration
-	p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
-	p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
-      }
-      else if(p->motorspeed_l<p->speedcmd){                           // Acceleration
+  	if ((p->right_pos+p->left_pos)/2- p->startpos >= p->dist){
+		p->finished=1;
+		p->motorspeed_l=0;
+		p->motorspeed_r=0;
+  	}
+  	else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist-d){ // Deacceleration
+		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
+		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
+  	}
+	else if(p->motorspeed_l<p->speedcmd){                           // Acceleration
 	p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
 	p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
-      }
-      else {
+    	}
+    	else {
 	p->motorspeed_l=p->speedcmd - K*(odo.theta_ref - odo.theta);
 	p->motorspeed_r=p->speedcmd + K*(odo.theta_ref - odo.theta);
       }
