@@ -127,7 +127,9 @@ void update_motcon(motiontype *p);
 int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
 
-
+void transform(int* input, double* output, int size); // Calibfunction.
+int minIntensity(int* input, int size);            // Minimum intensity function
+double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 
 typedef struct{
 		int state,oldstate;
@@ -543,4 +545,35 @@ void sm_update(smtype *p){
   else {
     p->time++;
   }
+}
+void transform(int* input, double* output, int size){
+int i;
+  for(i=0;i < size; i++){
+    output[i]=1-scale[i]*(input[i]-black_mean[i]);
+  }
+}
+int minIntensity(int* input, int size){
+  int i, index = 0;
+  int min = input[0];
+    for(i = 1; i < size; i++){
+      if(input[i]< min){
+        min = input[i];
+        index = i;
+      }
+
+    }
+  return index;
+}
+double center_of_gravity(int* input, int size, char color){
+  // Input is raw data from linesensors. Between each photoLED exist one "i";
+  int sumI = 0, sumXI=0, i;
+  int input_tmp[8];
+    for(i = 0; i< size; i++){
+      input_tmp[i] = color==0 ? 1-input[i] : input[i];    // 0 is black, everything else is white.
+    }
+    for(i=0; i < size; i++){
+      sumI += input_tmp[i];
+      sumXI += i*input_tmp[i];
+  }
+  return (double)sumXI/(double)sumI;
 }
