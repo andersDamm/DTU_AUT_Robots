@@ -58,7 +58,6 @@ symTableElement *
 	  return &tab[i];
       return 0;
     }
-
     symTableElement *
     getoutputref (const char *sym_name, symTableElement * tab)
     {
@@ -428,8 +427,6 @@ if (p->cmd !=0){
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turn;
       break;
-
-
     }
 
     p->cmd=0;
@@ -506,7 +503,6 @@ if (p->cmd !=0){
 	    p->motorspeed_r=-(p->speedcmd);
 	  }
 	}
-
     break;
   }
 }
@@ -522,7 +518,6 @@ int fwd(double dist, double speed,int time){
   else
     return mot.finished;
 }
-
 int turn(double angle, double speed,int time){
   if (time==0){
     mot.cmd=mot_turn;
@@ -535,7 +530,30 @@ int turn(double angle, double speed,int time){
   else
     return mot.finished;
 }
+/*int follow_line(int* line*, double speed, int time){   // Linesensor input???
+  int size = 0, index;
+  if(time == 0){
+  //  mot.cmd = mot_follow_line;
+    mot.speedcmd = speed;
+      size = sizeof(line)/sizeof(line[0]);
+      index = minIntensity(int* line, int size);
 
+      index < 4 ? (
+          mot.
+          p->motorspeed_r=p->speedcmd;
+          p->motorspeed_l=p->speedcmd
+        ):(
+
+        )
+
+
+
+    return 0;
+  }
+  else
+    return mot.finished;
+}
+*/
 
 void sm_update(smtype *p){
   if (p->state!=p->oldstate){
@@ -560,7 +578,6 @@ int minIntensity(int* input, int size){
         min = input[i];
         index = i;
       }
-
     }
   return index;
 }
