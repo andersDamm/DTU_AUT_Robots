@@ -1,4 +1,4 @@
-A = importdata('Log.dat',',');
+A = importdata('Log_mads_kicked_it.dat',',');
 
 ax1 = subplot(2,2,1);
 ax2 = subplot(2,2,2);
