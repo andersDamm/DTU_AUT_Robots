@@ -129,8 +129,8 @@ double centerOfGravity(int* input, int size, char color);  // Finding the line w
 
 //followRightLine - functions:
 followRightLine() // Makes the robot follow the rightmost line when a line devides
-rightMostSlope() // Determines the value of the sensor at which the slope ends.
-variance() // Determines the variance of the inputvalues given as an array.
+double rightMostSlope() // Determines the value of the sensor at which the slope ends.
+double variance() // Determines the variance of the inputvalues given as an array.
 
 
 
@@ -589,8 +589,9 @@ int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
   return 0;
 }
 
-void transform(int* input, double* output) {
+void transform(double* output) {
 	int i;
+	int* input = &(linesensor->data[0]);
 	black_mean[8] = { 45.4906,46.1698,46.0286,46.3113,46.0849,46.2453,46.1321,48.5189 };
 	scale[8] = { 0.0365,0.0313,0.0297,0.0272,0.084,0.0287,0.0312,0.0367 };
 	int size = sizeof(scale) / sizeof(scale[0]);
@@ -623,3 +624,29 @@ double centerOfGravity(int* input, int size, char color){
   }
   return (double)sumXI/(double)sumI;
 }
+
+//Follow rightmost line functions:
+	double rightMostSlope() {
+		double output[NUMBER_OF_IRSENSORS];
+		int i, b, a;
+		double crit_val_pos;
+		double crit_val = 0.8;
+		transform(output);
+		for (i = 0; i <= 6; i++) { //We assume a good calibration.
+			//Is there a significant slope?
+			if (output[i] > crit_val && output[i+1] <= crit_val) {
+				output[i]-output[i-1]
+			}
+			else if (output[i] < crit_val && output[i + 1] >= crit_val) {
+				a = (output[i+1]-output[i])
+				b = ()
+				crit_val_pos = 
+				return 
+			}
+
+		}
+		
+	}
+
+
+
