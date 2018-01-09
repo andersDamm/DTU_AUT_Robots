@@ -123,7 +123,7 @@ int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
 int followLineCenter(double dist, double speed, int time);
 
-void transform(int* input, double* output, int size); // Calibfunction.
+void transform(int* input, double* output); // Calibfunction - Calibrates in relation to black_mean.
 int minIntensity();            // Minimum intensity function
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 
@@ -581,12 +581,15 @@ int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
   return 0;
 }
 
-/*void transform(int* input, double* output, int size){
-int i;
-  for(i=0;i < size; i++){
-    output[i]=1-scale[i]*(input[i]-black_mean[i]);
-  }
-}*/
+void transform(int* input, double* output) {
+	int i;
+	black_mean[8] = { 45.4906,46.1698,46.0286,46.3113,46.0849,46.2453,46.1321,48.5189 };
+	scale[8] = { 0.0365,0.0313,0.0297,0.0272,0.084,0.0287,0.0312,0.0367 };
+	int size = sizeof(scale) / sizeof(scale[0]);
+	for (i = 0; i < size; i++) {
+		output[i] = 1 - scale[i] * (input[i] - black_mean[i]);
+	}
+}
 int minIntensity(){
   int i, index = 0;
   int min; 
