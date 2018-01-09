@@ -74,7 +74,9 @@ getinputref (const char *sym_name, symTableElement * tab)
 #define K_FOR_STRAIGHT_DIRECTION_CONTROL 1
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
 #define K_FOR_FOLLOWLINE 0.1
+#define K_FOLLOW_WALL 0.1
 #define NUMBER_OF_IRSENSORS 8
+#define OBSTACLE_DIST 20
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -243,7 +245,7 @@ if (lmssrv.config) {
 }
 
 
-  /* 
+  /*
   /  Read sensors and zero our position.
   */
 rhdSync();
@@ -403,6 +405,7 @@ void update_motcon(motiontype *p){
 
 
   double d, d_angle;
+  int side, irSide;
 
   if (p->cmd !=0){
 
@@ -411,7 +414,7 @@ void update_motcon(motiontype *p){
       case mot_stop:
       p->curcmd=mot_stop;
       break;
-      
+
       case mot_move:
 	p->startpos=(p->left_pos+p->right_pos)/2;
 	p->curcmd=mot_move;
@@ -424,7 +427,7 @@ void update_motcon(motiontype *p){
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turn;
       break;
-      
+
       case mot_followLineCenter:
 	p->curcmd=mot_followLineCenter;
       break;
@@ -507,8 +510,14 @@ void update_motcon(motiontype *p){
 
 	case mot_followLineCenter:
 		if (p->right_pos < p->dist) {
+      if(minDistFrontIR() > OBSTACLE_DIST){
 			p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
 			p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
+      }
+      else if(minDistFrontIR() <= OBSTACLE_DIST){
+        p->motorspeed_l = 0;
+        p->motorspeed_r = 0;
+      }
 		}
 		else {
 			p->motorspeed_l = 0;
@@ -517,6 +526,24 @@ void update_motcon(motiontype *p){
 		}
 	break;
   }
+
+  case mot_follow_wall: // Left vs. right?
+    if(side  == 0){
+        irSide = 1;
+    }
+    else if(side == 1){
+        K_FOLLOW_WALL *= (-1);   // Change sign and IR
+        irSide = 4;
+    }
+        if(condition == 0 && getDistIR()[irSide] < 50){
+        p->motorspeed_l=p->speedcmd - K_FOLLOW_WALL*(getDistIR()[irSide]-dist_wall); // Make "getDistIr() and a variable "side"
+        p->motorspeed_r=p->speedcmd + K_FOLLOW_WALL*(getDistIR()[irSide]-dist_wall);
+      }
+      else{
+        p->motorspeed_l = 0;
+        p->motorspeed_r = 0;
+        p->finished = 1;
+      }
 }
 
 
@@ -548,10 +575,18 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
 	mot.speedcmd = speed;
 	mot.dist = dist;
     return 0;
-  }	
+  }
   else return mot.finished;
 }
-
+int follow_wall(double speed, int time){
+  if(time == 0){
+    mot.cmd = mot_follow_wall;
+    mot.speed = speed;
+    return 0;
+  }
+  else
+    return = mot.finised;
+}
 
 void sm_update(smtype *p){
   if (p->state!=p->oldstate){
@@ -589,7 +624,7 @@ int i;
 }*/
 int minIntensity(){
   int i, index = 0;
-  int min; 
+  int min;
   min = (int)linesensor->data[0];
     for(i = 1; i < NUMBER_OF_IRSENSORS; i++){
       if(linesensor->data[i]< min){
