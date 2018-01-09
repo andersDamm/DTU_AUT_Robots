@@ -122,10 +122,16 @@ void update_motcon(motiontype *p);
 int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
 int followLineCenter(double dist, double speed, int time);
-
-void transform(int* input, double* output, int size); // Calibfunction.
-int minIntensity();            // Minimum intensity function
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
+
+/********************************************
+* Sensor functions and variables
+*/
+void transform(int* input, double* output, int size); // Calibfunction.
+int minIntensity();             // Minimum intensity function
+double minDistFrontIR()         // Finds the shortest distance to an object in front, measured by the IR sensor, in cm
+
+double Ka_IR = 1478.2786, Kb_IR = 94.007320920384;
 
 typedef struct{
   int state,oldstate;
@@ -611,4 +617,18 @@ double center_of_gravity(int* input, int size, char color){
       sumXI += i*input_tmp[i];
   }
   return (double)sumXI/(double)sumI;
+}
+
+double minDistFrontIR(){
+    int i;
+    double dist;
+
+    dist = irsensor->data[2];
+    for (i=1; i < 3; i++){
+        if(dist > irsensor->data[i]){
+            dist = irsensor->data[i];
+        }
+    }
+    dist = Ka_IR/(dist - Kb_IR);
+    return dist;
 }
