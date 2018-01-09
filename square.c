@@ -74,7 +74,7 @@ getinputref (const char *sym_name, symTableElement * tab)
 #define K_FOR_STRAIGHT_DIRECTION_CONTROL 1
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
 #define K_FOR_FOLLOWLINE 0.1
-#define K_FOLLOW_WALL 0.1
+#define K_FOLLOW_WALL 0.005
 #define NUMBER_OF_IRSENSORS 8
 #define OBSTACLE_DIST 20
 
@@ -127,7 +127,7 @@ int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
 int followLineCenter(double dist, double speed, int time);
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
-int follow_wall(int side, double speed, int time);
+int follow_wall(int side, double dist, double speed, int time);
 
 /********************************************
 * Sensor functions and variables
@@ -137,8 +137,11 @@ int minIntensity();             // Minimum intensity function
 double minDistFrontIR();         // Finds the shortest distance to an object in front, measured by the IR sensor, in cm
 double* getDistIR(double* dist);             // Returns the distance all IR's measure, in an array[5], measured in cm.
 
-double  Ka_IR[5] = [1523.280675968216, 1523.280675968216, 1478.278602346147, 1515.870801518367, 1515.870801518367];
-double  Kb_IR[5] = [93.590281110006, 93.590281110006, 94.007320920384, 92.744874767269, 92.744874767269];
+//double  Ka_IR[5] = {1523.280675968216, 1523.280675968216, 1478.278602346147, 1515.870801518367, 1515.870801518367};
+//double  Kb_IR[5] = {93.590281110006, 93.590281110006, 94.007320920384, 92.744874767269, 92.744874767269};
+double Ka_IR[5] = {1634.64672091309,1634.64672091309, 1634.64672091309,1634.64672091309,1634.64672091309};
+double Kb_IR[5] = {73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393};
+
 
 typedef struct{
   int state,oldstate;
@@ -163,7 +166,6 @@ int main()
   poseTimeLog_t poseTimeLog_a[SIZE_OF_ARRAY];
   int counter = 0;
 
-  int i;
   int running,n=0,arg,time=0;
   double dist=0,angle=0;
 
@@ -296,7 +298,7 @@ while (running){
  switch (mission.state) {
   case ms_init:
   n=4; dist=2;angle= - 90.0/180*M_PI;
-  mission.state= ms_followLineCenter;
+  mission.state= ms_follow_wall;
   break;
 
   case ms_fwd:
@@ -318,8 +320,8 @@ while (running){
         if (followLineCenter(dist,0.3,mission.time)) mission.state = ms_end;
       break;
 
-      case ms_follow_wall:
-        if(follow_wall(side,0.3,mission.time)) mission.state = ms_end;
+      case ms_follow_wall: //Side = 1 = left      //Side = 0 = right
+        if(follow_wall(1,20,0.3,mission.time)) mission.state = ms_end;
       break;
 
      case ms_end:
@@ -354,8 +356,13 @@ while (running){
  speedl->updated=1;
  speedr->data[0]=100*mot.motorspeed_r;
  speedr->updated=1;
+
+
+printf("mission: %d\n", mission.state);
+
  if (time  % 100 ==0)
     //    Good place for outputting debugging variables.
+
     //    printf(" laser %f \n",laserpar[3]);
   time++;
 /* stop if keyboard is activated
@@ -420,7 +427,7 @@ void update_motcon(motiontype *p){
 
 
   double d, d_angle;
-  int side, irSide;
+  double IR_dist[5];
 
   if (p->cmd !=0){
 
@@ -446,14 +453,22 @@ void update_motcon(motiontype *p){
       case mot_followLineCenter:
 	p->curcmd=mot_followLineCenter;
       break;
+      
+      case mot_follow_wall_left:
+	p->curcmd=mot_follow_wall_left;
+      break;
+      
+      case mot_follow_wall_right:
+	p->curcmd=mot_follow_wall_right;
+      break;
     }
     p->cmd=0;
   }
 
   switch (p->curcmd){
     case mot_stop:
-	      p->motorspeed_l=0;
-		  p->motorspeed_r=0;
+	p->motorspeed_l=0;
+	p->motorspeed_r=0;
     break;
 
     case mot_move:
@@ -540,12 +555,11 @@ void update_motcon(motiontype *p){
 			p->finished = 1;
 		}
 	break;
-  }
 
-  case mot_follow_wall_left:                      // If it turns wrong direction chech ir sensor 0 vs 4??
-    if(condition == 0 && getDistIR()[0] < 50){
-        p->motorspeed_l=p->speedcmd - K_FOLLOW_WALL*(getDistIR()[0]-dist_wall);
-        p->motorspeed_r=p->speedcmd + K_FOLLOW_WALL*(getDistIR()[0]-dist_wall);
+  case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
+    if(getDistIR(IR_dist)[0] < 70){
+        p->motorspeed_l=p->speedcmd - K_FOLLOW_WALL*(getDistIR(IR_dist)[0] - p->dist);
+        p->motorspeed_r=p->speedcmd + K_FOLLOW_WALL*(getDistIR(IR_dist)[0] - p->dist);
     }
     else{
         p->motorspeed_l = 0;
@@ -555,9 +569,9 @@ void update_motcon(motiontype *p){
     break;
 
   case mot_follow_wall_right:
-    if(condition == 0 && getDistIR()[4] < 50){
-        p->motorspeed_l=p->speedcmd + K_FOLLOW_WALL*(getDistIR()[4]-dist_wall);
-        p->motorspeed_r=p->speedcmd - K_FOLLOW_WALL*(getDistIR()[4]-dist_wall);
+    if(getDistIR(IR_dist)[4] < 70){
+        p->motorspeed_l=p->speedcmd + K_FOLLOW_WALL*(getDistIR(IR_dist)[4] - p->dist);
+        p->motorspeed_r=p->speedcmd - K_FOLLOW_WALL*(getDistIR(IR_dist)[4] - p->dist);
      }
     else{
         p->motorspeed_l = 0;
@@ -565,6 +579,8 @@ void update_motcon(motiontype *p){
         p->finished = 1;
        }
     break;
+  }
+  printf("IR0: %f \tIR4: %f \tscmd: %f  ",getDistIR(IR_dist)[0],getDistIR(IR_dist)[4],p->speedcmd);
 }
 
 
@@ -599,9 +615,10 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
   }
   else return mot.finished;
 }
-int follow_wall(int side, double speed, int time){
+int follow_wall(int side, double dist, double speed, int time){  //Side = 1 = left      //Side = 0 = right
   if(time == 0){
-    mot.speed = speed;
+    mot.speedcmd = speed;
+    mot.dist = dist;
     if (side){
         mot.cmd = mot_follow_wall_left;
     } else{
@@ -610,7 +627,7 @@ int follow_wall(int side, double speed, int time){
     return 0;
   }
   else
-    return = mot.finised;
+    return mot.finished;
 }
 
 void sm_update(smtype *p){
@@ -678,7 +695,7 @@ double minDistFrontIR(){
     double dist[5];
     double min_dist;
 
-    dist = getDistIR(dist);
+    getDistIR(dist);
     min_dist = dist[1];
     for (i=1; i < 3; i++){
         if(min_dist >  dist[i]){
@@ -691,7 +708,7 @@ double minDistFrontIR(){
 double* getDistIR(double* dist){
     int i;
     for(i=0; i<5; i++){
-        dist[i] = Ka_IR/(irsensor->data[i] - Kb_IR);
+        dist[i] = Ka_IR[i]/(irsensor->data[i] - Kb_IR[i]);
     }
     return dist;
 }
