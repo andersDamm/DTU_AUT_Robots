@@ -116,7 +116,7 @@ typedef struct{//input
   double startpos;
 }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter};
+enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter, mot_follow_wall_left, mot_follow_wall_right};
 
 void update_motcon(motiontype *p);
 
@@ -153,7 +153,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_followLineCenter,ms_end};
+enum {ms_init,ms_fwd,ms_turn,ms_followLineCenter,ms_follow_wall,ms_end};
 
 int main()
 {
@@ -313,6 +313,10 @@ while (running){
 
       case ms_followLineCenter:
         if (followLineCenter(dist,0.3,mission.time)) mission.state = ms_end;
+      break;
+
+      case ms_follow_wall:
+        if(follow_wall(side,0.3,mission.time)) mission.state = ms_end;
       break;
 
      case ms_end:
@@ -535,23 +539,29 @@ void update_motcon(motiontype *p){
 	break;
   }
 
-  case mot_follow_wall: // Left vs. right?
-    if(side  == 0){
-        irSide = 1;
+  case mot_follow_wall_left:                      // If it turns wrong direction chech ir sensor 0 vs 4??
+    if(condition == 0 && getDistIR()[0] < 50){
+        p->motorspeed_l=p->speedcmd - K_FOLLOW_WALL*(getDistIR()[0]-dist_wall);
+        p->motorspeed_r=p->speedcmd + K_FOLLOW_WALL*(getDistIR()[0]-dist_wall);
     }
-    else if(side == 1){
-        K_FOLLOW_WALL *= (-1);   // Change sign and IR
-        irSide = 4;
-    }
-        if(condition == 0 && getDistIR()[irSide] < 50){
-        p->motorspeed_l=p->speedcmd - K_FOLLOW_WALL*(getDistIR()[irSide]-dist_wall); // Make "getDistIr() and a variable "side"
-        p->motorspeed_r=p->speedcmd + K_FOLLOW_WALL*(getDistIR()[irSide]-dist_wall);
-      }
-      else{
+    else{
         p->motorspeed_l = 0;
         p->motorspeed_r = 0;
         p->finished = 1;
-      }
+     }
+    break;
+
+  case mot_follow_wall_right:
+    if(condition == 0 && getDistIR()[4] < 50){
+        p->motorspeed_l=p->speedcmd + K_FOLLOW_WALL*(getDistIR()[4]-dist_wall);
+        p->motorspeed_r=p->speedcmd - K_FOLLOW_WALL*(getDistIR()[4]-dist_wall);
+     }
+    else{
+        p->motorspeed_l = 0;
+        p->motorspeed_r = 0;
+        p->finished = 1;
+       }
+    break;
 }
 
 
@@ -586,7 +596,7 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
   }
   else return mot.finished;
 }
-int follow_wall(double speed, int time){
+int follow_wall(int side, double speed, int time){
   if(time == 0){
     mot.cmd = mot_follow_wall;
     mot.speed = speed;
@@ -659,23 +669,22 @@ double center_of_gravity(int* input, int size, char color){
 double minDistFrontIR(){
     int i;
     double dist[5];
-    double mindist;
+    double min_dist;
 
     dist = getDistIR(dist);
-    mindist = dist[1];
+    min_dist = dist[1];
     for (i=1; i < 3; i++){
-        if(mindist >  dist[i]){
-            mindist = dist[i];
+        if(min_dist >  dist[i]){
+            min_dist = dist[i];
         }
     }
-
-    return mindist;
+    return min_dist;
 }
 
 double* getDistIR(double* dist){
     int i;
     for(i=0; i<5; i++){
-        dist[i] = Ka_IR/(irsensor->data[2] - Kb_IR);
+        dist[i] = Ka_IR/(irsensor->data[i] - Kb_IR);
     }
     return dist;
 }
