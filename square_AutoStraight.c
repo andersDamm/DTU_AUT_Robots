@@ -125,7 +125,15 @@ int followLineCenter(double dist, double speed, int time);
 
 void transform(int* input, double* output); // Calibfunction - Calibrates in relation to black_mean.
 int minIntensity();            // Minimum intensity function
-double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
+double centerOfGravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
+
+//followRightLine - functions:
+followRightLine() // Makes the robot follow the rightmost line when a line devides
+rightMostSlope() // Determines the value of the sensor at which the slope ends.
+variance() // Determines the variance of the inputvalues given as an array.
+
+
+
 
 typedef struct{
   int state,oldstate;
@@ -507,8 +515,8 @@ void update_motcon(motiontype *p){
 
 	case mot_followLineCenter:
 		if (p->right_pos < p->dist) {
-			p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
-			p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
+			p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
+			p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
 		}
 		else {
 			p->motorspeed_l = 0;
@@ -602,7 +610,7 @@ int minIntensity(){
     }
   return index;
 }
-double center_of_gravity(int* input, int size, char color){
+double centerOfGravity(int* input, int size, char color){
   // Input is raw data from linesensors. Between each photoLED exist one "i";
   int sumI = 0, sumXI=0, i;
   int input_tmp[8];
