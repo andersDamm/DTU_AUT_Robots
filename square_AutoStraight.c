@@ -73,9 +73,7 @@ getinputref (const char *sym_name, symTableElement * tab)
 #define CONVERSION_FACTOR_ACC 0.01
 #define K_FOR_STRAIGHT_DIRECTION_CONTROL 1
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
-#define K 1
-#define K_ACC 0.001
-#define KP 0.1
+#define K_FOR_FOLLOWLINE 0.1
 #define NUMBER_OF_IRSENSORS 8
 
 typedef struct{ //input signals
@@ -295,7 +293,6 @@ while (running){
 
       case ms_turn:
       if (turn(angle,0.3,mission.time)){
-<<<<<<< HEAD
        n=n-1;
        if (n==0)
          mission.state=ms_end;
@@ -450,16 +447,16 @@ void update_motcon(motiontype *p){
 		p->motorspeed_r=0;
 		  }
 		  else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist-d){ // Deacceleration
-		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
-		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
+		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 		  }
 		  else if(p->motorspeed_l<p->speedcmd){                           // Acceleration
-		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
-		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
+		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 		  }
 		  else {
-		p->motorspeed_l=p->speedcmd - K*(odo.theta_ref - odo.theta);
-		p->motorspeed_r=p->speedcmd + K*(odo.theta_ref - odo.theta);
+		p->motorspeed_l=p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 		  }
     break;
 
@@ -510,8 +507,8 @@ void update_motcon(motiontype *p){
 
 	case mot_followLineCenter:
 		if (p->right_pos < p->dist) {
-			p->motorspeed_l = p->speedcmd - KP*(minIntensity(linesensor, 8) - 3.5);
-			p->motorspeed_r = p->speedcmd + KP*(minIntensity(linesensor, 8) - 3.5);
+			p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
+			p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
 		}
 		else {
 			p->motorspeed_l = 0;
