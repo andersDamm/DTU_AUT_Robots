@@ -60,6 +60,7 @@ getinputref (const char *sym_name, symTableElement * tab)
      return &tab[i];
    return 0;
  }
+
 /*****************************************
 * odometry
 */
@@ -72,6 +73,10 @@ getinputref (const char *sym_name, symTableElement * tab)
 #define CONVERSION_FACTOR_ACC 0.01
 #define K_FOR_STRAIGHT_DIRECTION_CONTROL 1
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
+#define K 1
+#define K_ACC 0.001
+#define KP 0.1
+#define NUMBER_OF_IRSENSORS 8
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -111,15 +116,18 @@ typedef struct{//input
   double startpos;
 }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn};
+enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter};
 
 void update_motcon(motiontype *p);
 
 
 int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
+int followLineCenter(double dist, double speed, int time);
 
-
+void transform(int* input, double* output, int size); // Calibfunction.
+int minIntensity();            // Minimum intensity function
+double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 
 typedef struct{
   int state,oldstate;
@@ -137,7 +145,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_end};
+enum {ms_init,ms_fwd,ms_turn,ms_followLineCenter,ms_end};
 
 int main()
 {
@@ -277,15 +285,17 @@ while (running){
  switch (mission.state) {
   case ms_init:
   n=4; dist=2;angle= - 90.0/180*M_PI;
-  mission.state= ms_fwd;
+  mission.state= ms_followLineCenter;
   break;
 
   case ms_fwd:
+
       if (fwd(dist,0.6,mission.time))  mission.state=ms_turn; // Square min ven
       break;
 
       case ms_turn:
       if (turn(angle,0.3,mission.time)){
+<<<<<<< HEAD
        n=n-1;
        if (n==0)
          mission.state=ms_end;
@@ -293,6 +303,10 @@ while (running){
          mission.state=ms_fwd;
      }
      break;
+
+      case ms_followLineCenter:
+        if (followLineCenter(dist,0.3,mission.time)) mission.state = ms_end;
+      break;
 
      case ms_end:
      mot.cmd=mot_stop;
@@ -400,99 +414,112 @@ void update_motcon(motiontype *p){
       case mot_stop:
       p->curcmd=mot_stop;
       break;
+      
       case mot_move:
-      p->startpos=(p->left_pos+p->right_pos)/2;
-      p->curcmd=mot_move;
+	p->startpos=(p->left_pos+p->right_pos)/2;
+	p->curcmd=mot_move;
       break;
 
       case mot_turn:
-      if (p->angle > 0)
-       p->startpos=p->right_pos;
-     else
-       p->startpos=p->left_pos;
-     p->curcmd=mot_turn;
-     break;
-
-
-   }
-
-   p->cmd=0;
- }
-
- switch (p->curcmd){
-  case mot_stop:
-  p->motorspeed_l=0;
-  p->motorspeed_r=0;
-  break;
-
-  case mot_move:
-  d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
-
-  if ((p->right_pos+p->left_pos)/2- p->startpos >= p->dist){
-   p->finished=1;
-   p->motorspeed_l=0;
-   p->motorspeed_r=0;
+	if (p->angle > 0)
+	    p->startpos=p->right_pos;
+	else
+	    p->startpos=p->left_pos;
+	p->curcmd=mot_turn;
+      break;
+      
+      case mot_followLineCenter:
+	p->curcmd=mot_followLineCenter;
+      break;
+    }
+    p->cmd=0;
   }
-      else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist-d){ // Deacceleration
-        p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-        p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-      }
-      else if(p->motorspeed_l<p->speedcmd){                           // Acceleration
-        p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-        p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-      }
-     else {                                                           // Constant speed and tracks direction
-       p->motorspeed_l=p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-       p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-      }
-     break;
+
+  switch (p->curcmd){
+    case mot_stop:
+	      p->motorspeed_l=0;
+		  p->motorspeed_r=0;
+    break;
+
+    case mot_move:
+		  d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
+
+		  if ((p->right_pos+p->left_pos)/2- p->startpos >= p->dist){
+		p->finished=1;
+		p->motorspeed_l=0;
+		p->motorspeed_r=0;
+		  }
+		  else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist-d){ // Deacceleration
+		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
+		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
+		  }
+		  else if(p->motorspeed_l<p->speedcmd){                           // Acceleration
+		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_ACC*(odo.theta_ref - odo.theta);
+		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_ACC*(odo.theta_ref - odo.theta);
+		  }
+		  else {
+		p->motorspeed_l=p->speedcmd - K*(odo.theta_ref - odo.theta);
+		p->motorspeed_r=p->speedcmd + K*(odo.theta_ref - odo.theta);
+		  }
+    break;
 
      case mot_turn:
       if (p->angle>0){ 		//Turn left
-       d_angle=p->motorspeed_r*p->motorspeed_r/(AJAX*p->w);
+    	  d_angle=p->motorspeed_r*p->motorspeed_r/(AJAX*p->w);
 
-       if(p->right_pos-p->startpos >= p->angle*p->w/2){
-         p->motorspeed_l=0;
-         p->motorspeed_r=0;
-         p->finished=1;
-        }
-	  else if(p->right_pos-p->startpos > p->angle*p->w/2-d_angle*p->w/2){ 	// Deceleration
-     p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
-     p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
-   }
-   else if(p->motorspeed_r < p->speedcmd){                                // Acceleration
-     p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
-     p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
-   }
-	  else{                                                                // Constant turn speed
-     p->motorspeed_r=p->speedcmd;
-     p->motorspeed_l=-(p->speedcmd);
-   }
- }
-	else { 				        //Turn right
-   d_angle=p->motorspeed_l*p->motorspeed_l/(AJAX*p->w);
+	  if(p->right_pos-p->startpos >= p->angle*p->w/2){
+	    p->motorspeed_l=0;
+	    p->motorspeed_r=0;
+	    p->finished=1;
+	  }
+	  else if(p->right_pos-p->startpos > p->angle*p->w/2-d_angle*p->w/2){
+	    p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
+	    p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
+	  }
+	  else if(p->motorspeed_r < p->speedcmd){
+	    p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
+	    p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
+	  }
+	  else{									//(p->right_pos-p->startpos < p->angle*p->w/2)
+	    p->motorspeed_r=p->speedcmd;
+	    p->motorspeed_l=-(p->speedcmd);
+	  }
+	}
+	  else { 				//Turn right
+	  d_angle=p->motorspeed_l*p->motorspeed_l/(AJAX*p->w);
 
-   if(p->left_pos - p->startpos >= - p->angle*p->w/2){                  // Finished
-     p->motorspeed_l=0;
-     p->motorspeed_r=0;
-     p->finished=1;
-   }
-   else if(p->left_pos-p->startpos > -p->angle*p->w/2-d_angle*p->w/2){  // Deceleration
-     p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
-     p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
-   }
-   else if(p->motorspeed_l < p->speedcmd){                              // Acceleration
-     p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
-     p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
-   }
-	  else{                                                               // Constant turn speed
-     p->motorspeed_l=p->speedcmd;
-     p->motorspeed_r=-(p->speedcmd);
-   }
- }
+	  if(p->left_pos - p->startpos >= - p->angle*p->w/2){
+	    p->motorspeed_l=0;
+	    p->motorspeed_r=0;
+	    p->finished=1;
+	  }
+	  else if(p->left_pos-p->startpos > -p->angle*p->w/2-d_angle*p->w/2){
+	    p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
+	    p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
+	  }
+	  else if(p->motorspeed_l < p->speedcmd){
+	    p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
+	    p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
+	  }
+	  else{			//(p->left_pos-p->startpos < - p->angle*p->w/2)
+	    p->motorspeed_l=p->speedcmd;
+	    p->motorspeed_r=-(p->speedcmd);
+	  }
+	}
+    break;
 
- break;
-}
+	case mot_followLineCenter:
+		if (p->right_pos < p->dist) {
+			p->motorspeed_l = p->speedcmd - KP*(minIntensity(linesensor, 8) - 3.5);
+			p->motorspeed_r = p->speedcmd + KP*(minIntensity(linesensor, 8) - 3.5);
+		}
+		else {
+			p->motorspeed_l = 0;
+			p->motorspeed_r = 0;
+			p->finished = 1;
+		}
+	break;
+  }
 }
 
 
@@ -506,7 +533,6 @@ int fwd(double dist, double speed,int time){
   else
     return mot.finished;
 }
-
 int turn(double angle, double speed,int time){
   if (time==0){
     mot.cmd=mot_turn;
@@ -518,6 +544,15 @@ int turn(double angle, double speed,int time){
   }
   else
     return mot.finished;
+}
+int followLineCenter(double dist, double speed, int time){   // linesensor input???
+  if(time == 0){
+	mot.cmd = mot_followLineCenter;
+	mot.speedcmd = speed;
+	mot.dist = dist;
+    return 0;
+  }	
+  else return mot.finished;
 }
 
 
@@ -547,4 +582,36 @@ int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
   fclose(outFile);
   printf("Ended logging of data\n\n");
   return 0;
+}
+
+/*void transform(int* input, double* output, int size){
+int i;
+  for(i=0;i < size; i++){
+    output[i]=1-scale[i]*(input[i]-black_mean[i]);
+  }
+}*/
+int minIntensity(){
+  int i, index = 0;
+  int min; 
+  min = (int)linesensor->data[0];
+    for(i = 1; i < NUMBER_OF_IRSENSORS; i++){
+      if(linesensor->data[i]< min){
+        min = linesensor->data[i];
+        index = i;
+      }
+    }
+  return index;
+}
+double center_of_gravity(int* input, int size, char color){
+  // Input is raw data from linesensors. Between each photoLED exist one "i";
+  int sumI = 0, sumXI=0, i;
+  int input_tmp[8];
+    for(i = 0; i< size; i++){
+      input_tmp[i] = color==0 ? 1-input[i] : input[i];    // 0 is black, everything else is white.
+    }
+    for(i=0; i < size; i++){
+      sumI += input_tmp[i];
+      sumXI += i*input_tmp[i];
+  }
+  return (double)sumXI/(double)sumI;
 }
