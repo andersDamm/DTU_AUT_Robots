@@ -120,11 +120,14 @@ enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter};
 
 void update_motcon(motiontype *p);
 
-
+/********************************************
+* Mission control
+*/
 int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
 int followLineCenter(double dist, double speed, int time);
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
+int follow_wall(int side, double speed, int time);
 
 /********************************************
 * Sensor functions and variables
@@ -586,10 +589,14 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
   }
   else return mot.finished;
 }
-int follow_wall(double speed, int time){
+int follow_wall(int side, double speed, int time){
   if(time == 0){
-    mot.cmd = mot_follow_wall;
     mot.speed = speed;
+    if (side){
+        mot.cmd = mot_follow_wall_left;
+    } else{
+        mot.cmd = mot_follow_wall_right;
+    }
     return 0;
   }
   else
