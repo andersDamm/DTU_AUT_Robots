@@ -29,6 +29,8 @@ struct {
 } gmk;
 double visionpar[10];
 double laserpar[10];
+int maxIRValues[8];
+int minIRValues[8];
 
 void serverconnect(componentservertype *s);
 void xml_proc(struct xml_in *x);
@@ -75,6 +77,8 @@ getinputref (const char *sym_name, symTableElement * tab)
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
 #define K_FOR_FOLLOWLINE 0.1
 #define NUMBER_OF_IRSENSORS 8
+#define CRITICAL_IR_VALUE 0.5
+#define IS_SIMULATION 0 //1=simulation, 0=real world
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -123,9 +127,12 @@ int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
 int followLineCenter(double dist, double speed, int time);
 
-void transform(int* input, double* output, int size); // Calibfunction.
+void transform(int* input, double* output); // Calibfunction - Calibrates in relation to black_mean.
 int minIntensity();            // Minimum intensity function
-double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
+double centerOfGravity(char color);  // Finding the line with centre of gravity algorithm
+void rightMostSlope(double* output); // Determines the value of the sensor at which the slope ends.
+char stopLine();
+
 
 typedef struct{
   int state,oldstate;
@@ -243,7 +250,7 @@ if (lmssrv.config) {
 }
 
 
-  /* 
+  /*
   /  Read sensors and zero our position.
   */
 rhdSync();
@@ -411,7 +418,7 @@ void update_motcon(motiontype *p){
       case mot_stop:
       p->curcmd=mot_stop;
       break;
-      
+
       case mot_move:
 	p->startpos=(p->left_pos+p->right_pos)/2;
 	p->curcmd=mot_move;
@@ -424,7 +431,7 @@ void update_motcon(motiontype *p){
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turn;
       break;
-      
+
       case mot_followLineCenter:
 	p->curcmd=mot_followLineCenter;
       break;
@@ -507,8 +514,8 @@ void update_motcon(motiontype *p){
 
 	case mot_followLineCenter:
 		if (p->right_pos < p->dist) {
-			p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
-			p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
+			p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
+			p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
 		}
 		else {
 			p->motorspeed_l = 0;
@@ -548,7 +555,7 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
 	mot.speedcmd = speed;
 	mot.dist = dist;
     return 0;
-  }	
+  }
   else return mot.finished;
 }
 
@@ -581,15 +588,24 @@ int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
   return 0;
 }
 
-/*void transform(int* input, double* output, int size){
-int i;
-  for(i=0;i < size; i++){
-    output[i]=1-scale[i]*(input[i]-black_mean[i]);
-  }
-}*/
+//transforms raw IR data to a number between 0 and 1
+void transform(double* output) {
+	int i;
+	double black_mean[8] = { 45.4906,46.1698,46.0286,46.3113,46.0849,46.2453,46.1321,48.5189 };
+	double scale[8] = { 0.0365,0.0313,0.0297,0.0272,0.084,0.0287,0.0312,0.0367 };
+    if(IS_SIMULATION==0){
+        double black_mean[8] = {85,85,85,85,85,85,85,85};
+    	double scale[8] = {0.00588,0.00588,0.00588,0.00588,0.00588,0.00588,0.00588,0.00588};
+    }
+	for (i = 0; i < NUMBER_OF_IRSENSORS; i++) {
+		output[i] = 1 - scale[i] * (linesensor->data[i] - black_mean[i]);
+	}
+}
+
+//finds IR sensor with minimum intensity
 int minIntensity(){
   int i, index = 0;
-  int min; 
+  int min;
   min = (int)linesensor->data[0];
     for(i = 1; i < NUMBER_OF_IRSENSORS; i++){
       if(linesensor->data[i]< min){
@@ -599,16 +615,46 @@ int minIntensity(){
     }
   return index;
 }
-double center_of_gravity(int* input, int size, char color){
+
+//finds black line with IR sensors using the center of gravity algorithm
+//color: 0=black, 1=white
+double centerOfGravity(char color){
   // Input is raw data from linesensors. Between each photoLED exist one "i";
-  int sumI = 0, sumXI=0, i;
-  int input_tmp[8];
-    for(i = 0; i< size; i++){
-      input_tmp[i] = color==0 ? 1-input[i] : input[i];    // 0 is black, everything else is white.
+    int sumI = 0, sumXI=0, i;
+    double input[NUMBER_OF_IRSENSORS];
+    transform(input);
+        for(i = 0; i< NUMBER_OF_IRSENSORS; i++){
+        input[i] = color==0 ? 1-input[i] : input[i];    // 0 is black, everything else is white.
     }
-    for(i=0; i < size; i++){
-      sumI += input_tmp[i];
-      sumXI += i*input_tmp[i];
-  }
-  return (double)sumXI/(double)sumI;
+    for(i=0; i < NUMBER_OF_IRSENSORS; i++){
+        sumI += input[i];
+        sumXI += i*input[i];
+    }
+    return (double)sumXI/(double)sumI;
+}
+
+//finds the rightmost slope of the IR data
+void rightMostSlope(char color){
+    int i;
+    double input[NUMBER_OF_IRSENSORS];
+    transform(input);
+    for(i=1;i<NUMBER_OF_IRSENSORS;i++){
+        if(linesensor->data[i]<CRITICAL_IR_VALUE && linesensor->data[i]>=CRITICAL_IR_VALUE){
+            a = linesensor->data[i]-linesensor->data[i-1];
+            return (crit_val-(double)linesensor->data[i])/(double)a+(double)i;
+        }
+    }
+    return 0;
+}
+
+//checks if the IR sensors detect a stop line.
+//return values: 1=line detected, 0=no line detected
+char stopLine(){
+    int i;
+    for(i=0;i<NUMBER_OF_IRSENSORS;i++){
+        if(linesensor->data[i]<0.9*maxIRValues[i]){
+            return 0;
+        }
+    }
+    return 1;
 }
