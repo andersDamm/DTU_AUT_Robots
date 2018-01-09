@@ -129,9 +129,11 @@ double center_of_gravity(int* input, int size, char color);  // Finding the line
 */
 void transform(int* input, double* output, int size); // Calibfunction.
 int minIntensity();             // Minimum intensity function
-double minDistFrontIR()         // Finds the shortest distance to an object in front, measured by the IR sensor, in cm
+double minDistFrontIR();         // Finds the shortest distance to an object in front, measured by the IR sensor, in cm
+double* getDistIR(double* dist);             // Returns the distance all IR's measure, in an array[5], measured in cm.
 
-double Ka_IR = 1478.2786, Kb_IR = 94.007320920384;
+double  Ka_IR[5] = [1523.280675968216, 1523.280675968216, 1478.278602346147, 1515.870801518367, 1515.870801518367];
+double  Kb_IR[5] = [93.590281110006, 93.590281110006, 94.007320920384, 92.744874767269, 92.744874767269];
 
 typedef struct{
   int state,oldstate;
@@ -621,14 +623,24 @@ double center_of_gravity(int* input, int size, char color){
 
 double minDistFrontIR(){
     int i;
-    double dist;
+    double dist[5];
+    double mindist;
 
-    dist = irsensor->data[2];
+    dist = getDistIR(dist);
+    mindist = dist[1];
     for (i=1; i < 3; i++){
-        if(dist > irsensor->data[i]){
-            dist = irsensor->data[i];
+        if(mindist >  dist[i]){
+            mindist = dist[i];
         }
     }
-    dist = Ka_IR/(dist - Kb_IR);
+
+    return mindist;
+}
+
+double* getDistIR(double* dist){
+    int i;
+    for(i=0; i<5; i++){
+        dist[i] = Ka_IR/(irsensor->data[2] - Kb_IR);
+    }
     return dist;
 }
