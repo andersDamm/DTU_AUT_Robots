@@ -79,7 +79,7 @@ symTableElement *
 #define CONVERSION_FACTOR_ACC 0.01
 #define K 1
 #define K_ACC 0.001
-#define KP 0.03
+#define KP 0.1
 #define NUMBER_OF_IRSENSORS 8
 
 
@@ -290,7 +290,7 @@ while (running){
   switch (mission.state) {
     case ms_init:
       n=4; dist=2;angle= - 90.0/180*M_PI;
-      mission.state= ms_fwd;
+      mission.state= ms_followLineCenter;
     break;
 
     case ms_fwd:
@@ -307,9 +307,9 @@ while (running){
 	}
     break;
 
-	case ms_followLineCenter:
-		if (followLineCenter(dist,0.3,mission.time)) mission.state = ms_end;
-	break;
+    case ms_followLineCenter:
+	    if (followLineCenter(dist,0.3,mission.time)) mission.state = ms_end;
+    break;
 
 
     case ms_end:
@@ -421,12 +421,13 @@ if (p->cmd !=0){
 
     p->finished=0;
     switch (p->cmd){
-    case mot_stop:
-      p->curcmd=mot_stop;
+      case mot_stop:
+	p->curcmd=mot_stop;
       break;
+      
       case mot_move:
-      p->startpos=(p->left_pos+p->right_pos)/2;
-      p->curcmd=mot_move;
+	p->startpos=(p->left_pos+p->right_pos)/2;
+	p->curcmd=mot_move;
       break;
 
       case mot_turn:
@@ -435,6 +436,10 @@ if (p->cmd !=0){
 	else
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turn;
+      break;
+      
+      case mot_followLineCenter:
+	p->curcmd=mot_followLineCenter;
       break;
     }
     p->cmd=0;
@@ -515,8 +520,8 @@ if (p->cmd !=0){
 
 	case mot_followLineCenter:
 		if (p->right_pos < p->dist) {
-			p->motorspeed_l = p->speedcmd + KP*(minIntensity(linesensor, 8) - 3.5);
-			p->motorspeed_r = p->speedcmd - KP*(minIntensity(linesensor, 8) - 3.5);
+			p->motorspeed_l = p->speedcmd - KP*(minIntensity(linesensor, 8) - 3.5);
+			p->motorspeed_r = p->speedcmd + KP*(minIntensity(linesensor, 8) - 3.5);
 		}
 		else {
 			p->motorspeed_l = 0;
