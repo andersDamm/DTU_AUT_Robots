@@ -76,7 +76,10 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define K_FOR_FOLLOWLINE 0.1
 #define NUMBER_OF_IRSENSORS 8
 #define CRITICAL_IR_VALUE 0.5
+#define CRITICAL_BLACK_VALUE 0.8
 #define IS_SIMULATION 0 //1=simulation, 0=real world
+#define CRIT_NR_BLACK_LINE 6
+
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -142,7 +145,7 @@ double rightMostPosSlope();
 char stopLine();
 int followRightLine(double dist, double speed, int time);
 
-int followRightLine(double dist, double speed, int time);
+int followLeftLine(double dist, double speed, int time);
 
 typedef struct{
   int state,oldstate;
@@ -297,8 +300,7 @@ update_odo(&odo);
 sm_update(&mission);
 switch (mission.state) {
   case ms_init:
-  n=4; dist=2;angle= - 90.0/180*M_PI;
-  mission.state= ms_followRightLine;
+  mission.state= ms_followLineCenter;
   break;
 
   case ms_fwd:
@@ -324,7 +326,7 @@ if (followRightLine(dist,0.3,mission.time)) mission.state = ms_end;
 break;
 
 case ms_followLeftLine:
-if (followRightLine(dist,0.3,mission.time)) mission.state = ms_end;
+if (followLeftLine(dist,0.3,mission.time)) mission.state = ms_end;
 break;
 
 case ms_end:
@@ -452,7 +454,7 @@ void update_motcon(motiontype *p){
             break;
 	    
 	    case mot_followLeftLine:
-            p->curcmd=mot_followRightLine;
+            p->curcmd=mot_followLeftLine;
             break;
         }
         p->cmd=0;
@@ -530,7 +532,7 @@ void update_motcon(motiontype *p){
             break;
 
         case mot_followLineCenter:
-            if (p->right_pos < p->dist) {
+            if (stopLine()==0) {
             p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
             p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
             }
@@ -543,8 +545,8 @@ void update_motcon(motiontype *p){
 
         case mot_followRightLine:
             if (p->right_pos < p->dist) {
-                p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.);
-                p->motorspeed_r = p->speedcmd  + K_FOR_FOLLOWLINE*(rightMostPosSlope() - 1);
+                p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
+                p->motorspeed_r = p->speedcmd  + K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
             }
             else {
                 p->motorspeed_l = 0;
@@ -554,9 +556,9 @@ void update_motcon(motiontype *p){
             break;
 	    
 	case mot_followLeftLine:
-            if (p->right_pos < p->dist) {
-                p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.);
-                p->motorspeed_r = p->speedcmd  + K_FOR_FOLLOWLINE*(rightMostPosSlope() - 1);
+            if (stopLine()==0) {
+                p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
+                p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
             }
             else {
                 p->motorspeed_l = 0;
@@ -611,7 +613,7 @@ int followRightLine(double dist, double speed, int time){   // linesensor input?
 
 int followLeftLine(double dist, double speed, int time){   // linesensor input???
   if(time == 0){
-     mot.cmd = mot_followRightLine;
+     mot.cmd = mot_followLeftLine;
      mot.speedcmd = speed;
      mot.dist = dist;
      return 0;
@@ -633,18 +635,21 @@ int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
   // Takes array of custom log-type and the length of this, writes to the file: Log.dat
   FILE *outFile;
   int i;
+  double input[NUMBER_OF_IRSENSORS];
+	getTransformedIRData(input);
   printf("\nStarting logging of data\n");
   outFile = fopen("Log.dat", "w");
   if (outFile == NULL) {
     fprintf(stderr, "ERROR: couldn't open %s for writing\n", "Log.dat");
     return 1;
-}
-for(i = 0;i < size; i++) {
-    fprintf(outFile,"%i,%f,%f,%f\n",poseTimeLog_out[i].time, poseTimeLog_out[i].x, poseTimeLog_out[i].y, poseTimeLog_out[i].theta);
-}
-fclose(outFile);
-printf("Ended logging of data\n\n");
-return 0;
+	}
+	for(i = 0;i < size; i++) {
+		fprintf(outFile,"%i,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",poseTimeLog_out[i].time, poseTimeLog_out[i].x, poseTimeLog_out[i].y, poseTimeLog_out[i].theta,
+input[7],input[6],input[5],input[4],input[3],input[2],input[1],input[0]);
+	}
+	fclose(outFile);
+	printf("Ended logging of data\n\n");
+	return 0;
 }
 
 //transforms raw IR data to a number between 0 and 1
@@ -741,7 +746,7 @@ double leftMostNegSlope() {
 	}
 	return -1;
 }
-double rightMostPosSlope(){
+double leftMostPosSlope(){
 	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins. 
     int i;
     double input[NUMBER_OF_IRSENSORS], a;
@@ -756,25 +761,21 @@ return -1;
 }
 
 
-
-
-
-
-
-
-
-/*
 //checks if the IR sensors detect a stop line.
 //return values: 1=line detected, 0=no line detected
 char stopLine(){
-  int i;
+  int i,count=0;
   double input[NUMBER_OF_IRSENSORS];
   getTransformedIRData(input);
   for(i=0;i<NUMBER_OF_IRSENSORS;i++){
-      if(linesensor->data[i]<0.9*maxIRValues[i]){
-          return 0;
+      if(input[i]>CRITICAL_BLACK_VALUE){
+          count++;
       }
   }
-  return 1;
+  if(count>CRIT_NR_BLACK_LINE)
+	printf("Stopline detected!,%d\n",count);
+  return count>CRIT_NR_BLACK_LINE ? 1 : 0;
 }
-*/
+
+
+
