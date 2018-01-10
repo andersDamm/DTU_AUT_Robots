@@ -75,6 +75,7 @@ getinputref (const char *sym_name, symTableElement * tab)
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
 #define K_FOR_FOLLOWLINE 0.1
 #define NUMBER_OF_IRSENSORS 8
+#define CRITICAL_IR_VALUE 0.5
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -127,13 +128,7 @@ void transform(int* input, double* output); // Calibfunction - Calibrates in rel
 int minIntensity();            // Minimum intensity function
 double centerOfGravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 
-//followRightLine - functions:
-followRightLine() // Makes the robot follow the rightmost line when a line devides
-rightMostSlope() // Determines the value of the sensor at which the slope ends.
-variance() // Determines the variance of the inputvalues given as an array.
-
-
-
+void rightMostSlope(double* output); // Determines the value of the sensor at which the slope ends.
 
 typedef struct{
   int state,oldstate;
@@ -251,7 +246,7 @@ if (lmssrv.config) {
 }
 
 
-  /* 
+  /*
   /  Read sensors and zero our position.
   */
 rhdSync();
@@ -419,7 +414,7 @@ void update_motcon(motiontype *p){
       case mot_stop:
       p->curcmd=mot_stop;
       break;
-      
+
       case mot_move:
 	p->startpos=(p->left_pos+p->right_pos)/2;
 	p->curcmd=mot_move;
@@ -432,7 +427,7 @@ void update_motcon(motiontype *p){
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turn;
       break;
-      
+
       case mot_followLineCenter:
 	p->curcmd=mot_followLineCenter;
       break;
@@ -556,7 +551,7 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
 	mot.speedcmd = speed;
 	mot.dist = dist;
     return 0;
-  }	
+  }
   else return mot.finished;
 }
 
@@ -589,8 +584,9 @@ int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
   return 0;
 }
 
-void transform(int* input, double* output) {
+void transform(double* output) {
 	int i;
+	int* input = &(linesensor->data[0]);
 	black_mean[8] = { 45.4906,46.1698,46.0286,46.3113,46.0849,46.2453,46.1321,48.5189 };
 	scale[8] = { 0.0365,0.0313,0.0297,0.0272,0.084,0.0287,0.0312,0.0367 };
 	int size = sizeof(scale) / sizeof(scale[0]);
@@ -600,7 +596,7 @@ void transform(int* input, double* output) {
 }
 int minIntensity(){
   int i, index = 0;
-  int min; 
+  int min;
   min = (int)linesensor->data[0];
     for(i = 1; i < NUMBER_OF_IRSENSORS; i++){
       if(linesensor->data[i]< min){
@@ -623,3 +619,39 @@ double centerOfGravity(int* input, int size, char color){
   }
   return (double)sumXI/(double)sumI;
 }
+void rightMostSlope(int* output){
+    int i;
+    for(i=1;i<NUMBER_OF_IRSENSORS;i++){
+        if(linesensor->data[i]<CRITICAL_IR_VALUE && linesensor->data[i]>=CRITICAL_IR_VALUE){
+            a = linesensor->data[i]-linesensor->data[i-1];
+            return (crit_val-(double)linesensor->data[i])/a+i;
+        }
+    }
+    return 0;
+}
+
+//Follow rightmost line functions:
+	double rightMostSlope() {
+		double output[NUMBER_OF_IRSENSORS];
+		int i, b, a;
+		double crit_val_pos;
+		double crit_val = 0.8;
+		transform(output);
+		for (i = 0; i <= 6; i++) { //We assume a good calibration.
+			//Is there a significant slope?
+			if (output[i] > crit_val && output[i+1] <= crit_val) {
+				output[i]-output[i-1]
+			}
+			else if (output[i] < crit_val && output[i + 1] >= crit_val) {
+				a = (output[i+1]-output[i])
+				b = ()
+				crit_val_pos = 
+				return 
+			}
+
+		}
+		
+	}
+
+
+
