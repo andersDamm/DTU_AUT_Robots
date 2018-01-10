@@ -127,10 +127,13 @@ int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
 int followLineCenter(double dist, double speed, int time);
 
-void transform(int* input, double* output); // Calibfunction - Calibrates in relation to black_mean.
+void getTransformedIRData(double* output); // Calibfunction - Calibrates in relation to black_mean.
 int minIntensity();            // Minimum intensity function
 double centerOfGravity(char color);  // Finding the line with centre of gravity algorithm
-void rightMostSlope(double* output); // Determines the value of the sensor at which the slope ends.
+double rightMostNegSlope();	// Returns a number from 0 to 7, which indicates the position 
+											//	at which the right most negative slope begins.
+double rightMostPosSlope();	// Returns a number from 0 to 7, which indicates the position 
+											//	at which the right most positive slope begins.
 char stopLine();
 
 
@@ -589,7 +592,7 @@ int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
 }
 
 //transforms raw IR data to a number between 0 and 1
-void transform(double* output) {
+void getTransformedIRData(double* output) {
 	int i;
 	double black_mean[8] = { 45.4906,46.1698,46.0286,46.3113,46.0849,46.2453,46.1321,48.5189 };
 	double scale[8] = { 0.0365,0.0313,0.0297,0.0272,0.084,0.0287,0.0312,0.0367 };
@@ -622,7 +625,7 @@ double centerOfGravity(char color){
   // Input is raw data from linesensors. Between each photoLED exist one "i";
     int sumI = 0, sumXI=0, i;
     double input[NUMBER_OF_IRSENSORS];
-    transform(input);
+	getTransformedIRData(input);
         for(i = 0; i< NUMBER_OF_IRSENSORS; i++){
         input[i] = color==0 ? 1-input[i] : input[i];    // 0 is black, everything else is white.
     }
@@ -634,22 +637,33 @@ double centerOfGravity(char color){
 }
 
 //finds the rightmost slope of the IR data
-double rightMostSlope(char color){
-	// Returns a number from 0 to 7, which indicates the position at which the slope begins. 
-	// The slope can either be negative or positive.
+double rightMostPosSlope() {
+	// Returns a number from 0 to 7, which indicates the position at which the right most positive slope begins.
+	int i;
+	double input[NUMBER_OF_IRSENSORS], a;
+	getTransformedIRData(input);
+	for (i = 1; i<NUMBER_OF_IRSENSORS; i++) {//right most negative slope.
+		if (input[i]<CRITICAL_IR_VALUE && input[i - 1] >= CRITICAL_IR_VALUE) {
+			//if(linesensor->data[i-1]<CRITICAL_IR_VALUE && linesensor->data[i]>=CRITICAL_IR_VALUE){
+			a = input[i] - input[i - 1];
+			return (CRITICAL_IR_VALUE - (double)input[i]) / (double)a + (double)i;
+		}
+	}
+	return -1;
+}
+double rightMostNegSlope(){
+	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins. 
     int i;
-	int slopePosition;
-    double input[NUMBER_OF_IRSENSORS];
-    transform(input);
+    double input[NUMBER_OF_IRSENSORS], a;
+	getTransformedIRData(input);
     for(i=1;i<NUMBER_OF_IRSENSORS;i++){//right most negative slope.
-        if(linesensor->data[i-1]<CRITICAL_IR_VALUE && linesensor->data[i]>=CRITICAL_IR_VALUE){
-            a = linesensor->data[i]-linesensor->data[i-1];
-            return (crit_val-(double)linesensor->data[i])/(double)a+(double)i;
+		if (input[i]>CRITICAL_IR_VALUE && input[i-1] <= CRITICAL_IR_VALUE) {
+        //if(linesensor->data[i-1]<CRITICAL_IR_VALUE && linesensor->data[i]>=CRITICAL_IR_VALUE){
+            a = input[i]-input[i-1];
+            return (CRITICAL_IR_VALUE -(double)input[i])/(double)a+(double)i;
         }
     }
-	for (i = 1; i<NUMBER_OF_IRSENSORS; i++) {//right most positive slope
-
-    return slopePosition;
+    return -1;
 }
 
 //checks if the IR sensors detect a stop line.
@@ -657,7 +671,7 @@ double rightMostSlope(char color){
 char stopLine(){
     int i;
 	double input[NUMBER_OF_IRSENSORS];
-	transform(input);
+	getTransformedIRData(input);
     for(i=0;i<NUMBER_OF_IRSENSORS;i++){
         if(linesensor->data[i]<0.9*maxIRValues[i]){
             return 0;
