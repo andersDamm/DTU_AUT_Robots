@@ -116,7 +116,7 @@ typedef struct{//input
   double startpos;
 }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter, mot_follow_wall_left, mot_follow_wall_right};
+enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between};
 
 void update_motcon(motiontype *p);
 
@@ -317,11 +317,11 @@ while (running){
      break;
 
       case ms_followLineCenter:
-        if (followLineCenter(dist,0.3,mission.time)) mission.state = ms_end;
+        if (followLineCenter(dist,0.1,mission.time)) mission.state = ms_end;
       break;
 
-      case ms_follow_wall: //Side = 1 = left      //Side = 0 = right
-        if(follow_wall(1,20,0.3,mission.time)) mission.state = ms_end;
+      case ms_follow_wall: //Side = 0 = left   Side = 1 = right   Side = 2 = middle
+        if(follow_wall(2,20,-0.3,mission.time)) mission.state = ms_end;
       break;
 
      case ms_end:
@@ -358,11 +358,8 @@ while (running){
  speedr->updated=1;
 
 
-printf("mission: %d\n", mission.state);
 
  if (time  % 100 ==0)
-    //    Good place for outputting debugging variables.
-
     //    printf(" laser %f \n",laserpar[3]);
   time++;
 /* stop if keyboard is activated
@@ -461,6 +458,10 @@ void update_motcon(motiontype *p){
       case mot_follow_wall_right:
 	p->curcmd=mot_follow_wall_right;
       break;
+      
+      case mot_follow_wall_between:
+	p->curcmd=mot_follow_wall_between;
+      break;
     }
     p->cmd=0;
   }
@@ -538,23 +539,21 @@ void update_motcon(motiontype *p){
 	}
     break;
 
-	case mot_followLineCenter:
-		if (p->right_pos < p->dist) {
-      if(minDistFrontIR() > OBSTACLE_DIST){
-			p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
-			p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
-      }
-      else if(minDistFrontIR() <= OBSTACLE_DIST){
-        p->motorspeed_l = 0;
-        p->motorspeed_r = 0;
-      }
-		}
-		else {
-			p->motorspeed_l = 0;
-			p->motorspeed_r = 0;
-			p->finished = 1;
-		}
-	break;
+    case mot_followLineCenter:
+	if (p->right_pos < p->dist) {
+	  if(minDistFrontIR() > OBSTACLE_DIST){
+	    p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
+	    p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity(linesensor, 8) - 3.5);
+	  }else if(minDistFrontIR() <= OBSTACLE_DIST){
+	    p->motorspeed_l = 0;
+	    p->motorspeed_r = 0;
+	  }
+	}else {
+	  p->motorspeed_l = 0;
+	  p->motorspeed_r = 0;
+	  p->finished = 1;
+	}
+    break;
 
   case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
     if(getDistIR(IR_dist)[0] < 70){
@@ -579,8 +578,32 @@ void update_motcon(motiontype *p){
         p->finished = 1;
        }
     break;
+  
+  case mot_follow_wall_between:
+      if(getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd > 0){
+	p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+	p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+      } else if (getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd < 0){
+	  if (getDistIR(IR_dist)[0] < getDistIR(IR_dist)[4] && 
+	    (odo.theta - odo.theta_ref) <  0.52){ //Left closest //0.52 rad ~= 30deg
+	  p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+	  p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+	} else if (getDistIR(IR_dist)[0] > getDistIR(IR_dist)[4] && 
+	    (odo.theta - odo.theta_ref) > -0.52){ //right closest //0.52 rad ~= 30deg
+	  p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+	  p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+	} else {
+	  p->motorspeed_l = p->speedcmd;
+	  p->motorspeed_r = p->speedcmd;
+	}
+      } else{
+	p->motorspeed_l = 0;
+        p->motorspeed_r = 0;
+        p->finished = 1;
+      }
   }
-  printf("IR0: %f \tIR4: %f \tscmd: %f  ",getDistIR(IR_dist)[0],getDistIR(IR_dist)[4],p->speedcmd);
+  //Gives distance of left & right IR sensors and speedcmd
+  //printf("IR_Left: %f \tIR_Right: %f \tscmd: %f  ",getDistIR(IR_dist)[0],getDistIR(IR_dist)[4],p->speedcmd);
 }
 
 
@@ -615,14 +638,17 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
   }
   else return mot.finished;
 }
-int follow_wall(int side, double dist, double speed, int time){  //Side = 1 = left      //Side = 0 = right
+int follow_wall(int side, double dist, double speed, int time){  //Side = 0 = left   Side = 1 = right   Side = 2 = between!!, min ven
   if(time == 0){
     mot.speedcmd = speed;
     mot.dist = dist;
-    if (side){
-        mot.cmd = mot_follow_wall_left;
-    } else{
-        mot.cmd = mot_follow_wall_right;
+    if (side == 0){
+      mot.cmd = mot_follow_wall_left;
+    } else if (side == 1){
+      mot.cmd = mot_follow_wall_right;
+    } else if (side == 2){
+      odo.theta_ref = odo.theta;
+      mot.cmd = mot_follow_wall_between;
     }
     return 0;
   }
