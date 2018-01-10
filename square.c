@@ -160,7 +160,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_follow_wall,ms_end,ms_PushNDrive};
+enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_follow_wall,ms_end,ms_PushNDrive, throwback};
 
 int main()
 {
@@ -299,7 +299,7 @@ while (running){
  switch (mission.state) {
   case ms_init:
   n=0; dist=0.5;angle= -90.0/180*M_PI;
-  mission.state= ms_turnr;
+  mission.state= ms_PushNDrive;
   break;
 
   case ms_fwd:
@@ -342,25 +342,30 @@ while (running){
       printf("No data logged\n");
     }
   break;
-
+  
+  case throwback:
+    n += 1;
+    mission.state=ms_PushNDrive;
+  break;
+  
   case ms_PushNDrive:
     if(n==0){
-      if(followLineCenter(4,0.3, mission.time)) n++;
+      if(followLineCenter(4,0.3, mission.time)) mission.state=throwback;
     }else if(n==1){
-      if(fwd(50,0.3,mission.time)) n++;
+      if(fwd(40,0.3,mission.time)) mission.state=throwback;
     }else if(n==2){
-      if(fwd(75,-0.3,mission.time)) n++;
+      if(fwd(75,-0.3,mission.time)) mission.state=throwback;
     }else if(n==3){
-      if(turn(-90.0/180*M_PI,0.3,mission.time)) n++;
+      if(turn(-90.0/180*M_PI,0.3,mission.time)) mission.state=throwback;
     }else if(n==4){
-      if(turnr(30,90.0/180*M_PI,0.3,mission.time)) n++;
+      if(turnr(30,90.0/180*M_PI,0.3,mission.time)) mission.state=throwback;
     }else if(n==5){
-      if(follow_wall(0,20,0.3,mission.time)) n++;
+      if(follow_wall(0,20,0.3,mission.time)) mission.state=throwback;
     }else if(n==6){
-      if(turnr(20,90.0/180*M_PI,0.3,mission.time)) n++;
+      if(turnr(20,90.0/180*M_PI,0.3,mission.time)) mission.state=throwback;
     }else if(n==7){
       if(followLineCenter(1,0.2,mission.time)) mission.state=ms_end;
-    }else{
+    }else if(n==8){
       mission.state=ms_end;
     }
   break;
@@ -704,7 +709,7 @@ void update_motcon(motiontype *p){
   p->finished = 1;
 }
 }
-printf("IR0: %f \ttheta_ref: %f \ttheta: %f  ",getDistIR(IR_dist)[0],odo.theta_ref, odo.theta);
+printf("IR0: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[0],odo.theta_ref, odo.theta);
 }
 
 
