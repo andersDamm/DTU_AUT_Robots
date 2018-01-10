@@ -634,23 +634,30 @@ double centerOfGravity(char color){
 }
 
 //finds the rightmost slope of the IR data
-void rightMostSlope(char color){
+double rightMostSlope(char color){
+	// Returns a number from 0 to 7, which indicates the position at which the slope begins. 
+	// The slope can either be negative or positive.
     int i;
+	int slopePosition;
     double input[NUMBER_OF_IRSENSORS];
     transform(input);
-    for(i=1;i<NUMBER_OF_IRSENSORS;i++){
-        if(linesensor->data[i]<CRITICAL_IR_VALUE && linesensor->data[i]>=CRITICAL_IR_VALUE){
+    for(i=1;i<NUMBER_OF_IRSENSORS;i++){//right most negative slope.
+        if(linesensor->data[i-1]<CRITICAL_IR_VALUE && linesensor->data[i]>=CRITICAL_IR_VALUE){
             a = linesensor->data[i]-linesensor->data[i-1];
             return (crit_val-(double)linesensor->data[i])/(double)a+(double)i;
         }
     }
-    return 0;
+	for (i = 1; i<NUMBER_OF_IRSENSORS; i++) {//right most positive slope
+
+    return slopePosition;
 }
 
 //checks if the IR sensors detect a stop line.
 //return values: 1=line detected, 0=no line detected
 char stopLine(){
     int i;
+	double input[NUMBER_OF_IRSENSORS];
+	transform(input);
     for(i=0;i<NUMBER_OF_IRSENSORS;i++){
         if(linesensor->data[i]<0.9*maxIRValues[i]){
             return 0;
