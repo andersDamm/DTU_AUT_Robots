@@ -344,38 +344,38 @@ if (lmssrv.config) {
   break;
   
   case ms_PushNDrive:
-    printf("n: %d", n);
+    printf("n: %d ", n);
     if(n==0){
       if(followLineCenter(4,0.3, mission.time)){
-        mission.time=0; n++;
+        mission.time=-1; n=1;
       }
     }else if(n==1){
-      if(fwd(40,0.3,mission.time)){
-        mission.time=0; n++;
+      if(fwd(0.50,0.3,mission.time)){
+        mission.time=-1; n=2;
       }
     }else if(n==2){
-      if(fwd(75,-0.3,mission.time)){
-        mission.time=0; n++;
+      if(fwd(0.75,-0.3,mission.time)){
+        mission.time=-1; n++;
       }
     }else if(n==3){
       if(turn(-90.0/180*M_PI,0.3,mission.time)){
-        mission.time=0; n++;
+        mission.time=-1; n++;
       }
     }else if(n==4){
-      if(turnr(30,90.0/180*M_PI,0.3,mission.time)){
-        mission.time=0; n++;
+      if(turnr(0.40,90.0/180*M_PI,0.1,mission.time)){
+        mission.time=-1; n++;
       }
     }else if(n==5){
-      if(follow_wall(0,20,0.3,mission.time)){
-        mission.time=0; n++;
+      if(follow_wall(0,20,0.1,mission.time)){
+        mission.time=-1; n++;
       }
     }else if(n==6){
-      if(turnr(20,90.0/180*M_PI,0.3,mission.time)){
-        mission.time=0; n++;
+      if(turnr(0.30,90.0/180*M_PI,0.1,mission.time)){
+        mission.time=-1; n++;
       }
     }else if(n==7){
       if(followLineCenter(1,0.2,mission.time)){
-        mission.time=0; n++;
+        mission.time=-1; n++;
       }
     }else if(n==8){
       mission.state=ms_end;
