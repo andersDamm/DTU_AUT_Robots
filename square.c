@@ -345,7 +345,7 @@ while (running){
 
   case ms_PushNDrive:
     if(n==0){
-      if(followLineCenter(4,speed, mission.time)) n++;
+      if(followLineCenter(4,0.3, mission.time)) n++;
     }else if(n==1){
       if(fwd(50,0.3,mission.time)) n++;
     }else if(n==2){
@@ -353,7 +353,7 @@ while (running){
     }else if(n==3){
       if(turn(-90.0/180*M_PI,0.3,mission.time)) n++;
     }else if(n==4){
-      if(turnr(30,90.0/180*M_PI,0.3,mision.time)) n++;
+      if(turnr(30,90.0/180*M_PI,0.3,mission.time)) n++;
     }else if(n==5){
       if(follow_wall(0,20,0.3,mission.time)) n++;
     }else if(n==6){
