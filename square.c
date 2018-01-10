@@ -77,7 +77,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define NUMBER_OF_IRSENSORS 8
 #define CRITICAL_IR_VALUE 0.5
 #define CRITICAL_BLACK_VALUE 0.8
-#define IS_SIMULATION 0 //1=simulation, 0=real world
+#define IS_SIMULATION 1 //1=simulation, 0=real world
 #define CRIT_NR_BLACK_LINE 6
 
 
@@ -300,34 +300,34 @@ update_odo(&odo);
 sm_update(&mission);
 switch (mission.state) {
   case ms_init:
-  mission.state= ms_followLineCenter;
+  mission.state= ms_followLeftLine;
   break;
 
   case ms_fwd:
     if (fwd(dist,0.6,mission.time))  mission.state=ms_turn; // Square min ven
-    break;
+  break;
 
-    case ms_turn:
-    if (turn(angle,0.3,mission.time)){
-     n=n-1;
-     if (n==0)
-       mission.state=ms_end;
-   else
-       mission.state=ms_fwd;
-}
-break;
+  case ms_turn:
+  	if (turn(angle,0.3,mission.time)){
+    	n=n-1;
+  		if (n==0)
+       		mission.state=ms_end;
+   		else
+       		mission.state=ms_fwd;
+	}
+  break;
 
-case ms_followLineCenter:
-if (followLineCenter(dist,0.3,mission.time)) mission.state = ms_end;
-break;
+	case ms_followLineCenter:
+		if (followLineCenter(1,0.3,mission.time)) mission.state = ms_end;
+	break;
 
-case ms_followRightLine:
-if (followRightLine(dist,0.3,mission.time)) mission.state = ms_end;
-break;
+	case ms_followRightLine:
+		if (followRightLine(2,0.3,mission.time)) mission.state = ms_followLineCenter;
+	break;
 
-case ms_followLeftLine:
-if (followLeftLine(dist,0.3,mission.time)) mission.state = ms_end;
-break;
+	case ms_followLeftLine:
+		if (followLeftLine(2,0.3,mission.time)) mission.state = ms_end;
+	break;
 
 case ms_end:
 mot.cmd=mot_stop;
@@ -429,12 +429,12 @@ void update_motcon(motiontype *p){
         p->finished=0;
         switch (p->cmd){
             case mot_stop:
-            p->curcmd=mot_stop;
+            	p->curcmd=mot_stop;
             break;
 
             case mot_move:
-            p->startpos=(p->left_pos+p->right_pos)/2;
-            p->curcmd=mot_move;
+		        p->startpos=(p->left_pos+p->right_pos)/2;
+		        p->curcmd=mot_move;
             break;
 
             case mot_turn:
@@ -442,19 +442,20 @@ void update_motcon(motiontype *p){
                 p->startpos=p->right_pos;
             else
                 p->startpos=p->left_pos;
-            p->curcmd=mot_turn;
+            	p->curcmd=mot_turn;
             break;
 
             case mot_followLineCenter:
-            p->curcmd=mot_followLineCenter;
+				p->startpos=p->left_pos;
+            	p->curcmd=mot_followLineCenter;
             break;
 	    
 	    case mot_followRightLine:
-            p->curcmd=mot_followRightLine;
+            	p->curcmd=mot_followRightLine;
             break;
 	    
 	    case mot_followLeftLine:
-            p->curcmd=mot_followLeftLine;
+            	p->curcmd=mot_followLeftLine;
             break;
         }
         p->cmd=0;
@@ -532,7 +533,7 @@ void update_motcon(motiontype *p){
             break;
 
         case mot_followLineCenter:
-            if (stopLine()==0) {
+            if (!(stopLine()) && p->left_pos - p->startpos < p->dist) {
             p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
             p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
             }
