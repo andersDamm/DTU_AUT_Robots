@@ -116,7 +116,7 @@ typedef struct{//input
   double startpos;
 }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between};
+enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between};
 
 void update_motcon(motiontype *p);
 
@@ -457,7 +457,7 @@ void update_motcon(motiontype *p){
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turn;
       break;
-      
+
       case mot_turnr:
 	if (p->angle > 0)
 	    p->startpos=p->right_pos;
@@ -465,7 +465,7 @@ void update_motcon(motiontype *p){
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turnr;
       break;
-      
+
       case mot_followLineCenter:
 	p->curcmd=mot_followLineCenter;
       break;
@@ -477,7 +477,7 @@ void update_motcon(motiontype *p){
       case mot_follow_wall_right:
 	p->curcmd=mot_follow_wall_right;
       break;
-      
+
       case mot_follow_wall_between:
 	p->curcmd=mot_follow_wall_between;
       break;
@@ -560,10 +560,10 @@ void update_motcon(motiontype *p){
 
     case mot_turnr:
         if (p->angle>0){ 		//Turn left
-	   
+
 	  delta_r = p->dist/(p->dist-p->w/2);
 	  delta_l = p->dist/(p->dist+p->w/2);
-	    
+
 	    if(p->right_pos-p->startpos >= p->angle*(p->dist+p->w/2)){
 	      p->motorspeed_l=0;
 	      p->motorspeed_r=0;
@@ -572,12 +572,12 @@ void update_motcon(motiontype *p){
 	    else if (p->right_pos-p->startpos < p->angle*(p->dist+p->w/2)){
 	      p->motorspeed_l =  p->speedcmd*delta_l;
 	      p->motorspeed_r =  p->speedcmd*delta_r;
-	    }   
+	    }
 	}
 	else {
 	  delta_r = p->dist/(p->dist+p->w/2);
 	  delta_l = p->dist/(p->dist-p->w/2);
-	  
+
 	  if(p->left_pos-p->startpos >= -(p->angle*(p->dist+p->w/2))){
 	      p->motorspeed_l=0;
 	      p->motorspeed_r=0;
@@ -646,17 +646,17 @@ void update_motcon(motiontype *p){
         p->finished = 1;
        }
     break;
-  
+
   case mot_follow_wall_between:
       if(getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd > 0){
 	p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
 	p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
       } else if (getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd < 0){
-	  if (getDistIR(IR_dist)[0] < getDistIR(IR_dist)[4] && 
+	  if (getDistIR(IR_dist)[0] < getDistIR(IR_dist)[4] &&
 	    (odo.theta - odo.theta_ref) <  0.52){ //Left closest //0.52 rad ~= 30deg
 	  p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
 	  p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-	} else if (getDistIR(IR_dist)[0] > getDistIR(IR_dist)[4] && 
+	} else if (getDistIR(IR_dist)[0] > getDistIR(IR_dist)[4] &&
 	    (odo.theta - odo.theta_ref) > -0.52){ //right closest //0.52 rad ~= 30deg
 	  p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
 	  p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
