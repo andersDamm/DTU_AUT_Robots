@@ -160,7 +160,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_follow_wall,ms_end,ms_PushNDrive, throwback};
+enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_follow_wall,ms_end,ms_PushNDrive};
 
 int main()
 {
@@ -173,9 +173,9 @@ int main()
   /* Establish connection to robot sensors and actuators.
   */
   if (rhdConnect('w',"localhost",ROBOTPORT)!='w'){
-   printf("Can't connect to rhd \n");
-   exit(EXIT_FAILURE);
- }
+    printf("Can't connect to rhd \n");
+    exit(EXIT_FAILURE);
+  }
 
  printf("connected to robot \n");
  if ((inputtable=getSymbolTable('r'))== NULL){
@@ -262,39 +262,39 @@ if (lmssrv.config) {
   /*
   /  Read sensors and zero our position.
   */
-rhdSync();
+  rhdSync();
 
-odo.w=0.256;
-odo.cr=DELTA_M;
-odo.cl=odo.cr;
-odo.left_enc=lenc->data[0];
-odo.right_enc=renc->data[0];
-reset_odo(&odo);
-printf("position: %f, %f\n", odo.left_pos, odo.right_pos);
-mot.w=odo.w;
-running=1;
-mission.state=ms_init;
-mission.oldstate=-1;
-while (running){
-  if (lmssrv.config && lmssrv.status && lmssrv.connected){
-   while ( (xml_in_fd(xmllaser,lmssrv.sockfd) >0))
-     xml_proca(xmllaser);
- }
+  odo.w=0.256;
+  odo.cr=DELTA_M;
+  odo.cl=odo.cr;
+  odo.left_enc=lenc->data[0];
+  odo.right_enc=renc->data[0];
+  reset_odo(&odo);
+  printf("position: %f, %f\n", odo.left_pos, odo.right_pos);
+  mot.w=odo.w;
+  running=1;
+  mission.state=ms_init;
+  mission.oldstate=-1;
+  while (running){
+    if (lmssrv.config && lmssrv.status && lmssrv.connected){
+      while ( (xml_in_fd(xmllaser,lmssrv.sockfd) >0))
+        xml_proca(xmllaser);
+    }
 
- if (camsrv.config && camsrv.status && camsrv.connected){
-   while ( (xml_in_fd(xmldata,camsrv.sockfd) >0))
-     xml_proc(xmldata);
- }
+    if (camsrv.config && camsrv.status && camsrv.connected){
+      while ( (xml_in_fd(xmldata,camsrv.sockfd) >0))
+        xml_proc(xmldata);
+    }
 
 
- rhdSync();
- odo.left_enc=lenc->data[0];
- odo.right_enc=renc->data[0];
- update_odo(&odo);
+    rhdSync();
+    odo.left_enc=lenc->data[0];
+    odo.right_enc=renc->data[0];
+    update_odo(&odo);
 
-/****************************************
-/ mission statemachine
-*/
+  /****************************************
+  / mission statemachine
+  */
  sm_update(&mission);
  switch (mission.state) {
   case ms_init:
@@ -343,28 +343,39 @@ while (running){
     }
   break;
   
-  case throwback:
-    n += 1;
-    mission.state=ms_PushNDrive;
-  break;
-  
   case ms_PushNDrive:
     if(n==0){
-      if(followLineCenter(4,0.3, mission.time)) mission.state=throwback;
+      if(followLineCenter(4,0.3, mission.time)){
+        mission.time=0; n++;
+      }
     }else if(n==1){
-      if(fwd(40,0.3,mission.time)) mission.state=throwback;
+      if(fwd(40,0.3,mission.time)){
+        mission.time=0; n++;
+      }
     }else if(n==2){
-      if(fwd(75,-0.3,mission.time)) mission.state=throwback;
+      if(fwd(75,-0.3,mission.time)){
+        mission.time=0; n++;
+      }
     }else if(n==3){
-      if(turn(-90.0/180*M_PI,0.3,mission.time)) mission.state=throwback;
+      if(turn(-90.0/180*M_PI,0.3,mission.time)){
+        mission.time=0; n++;
+      }
     }else if(n==4){
-      if(turnr(30,90.0/180*M_PI,0.3,mission.time)) mission.state=throwback;
+      if(turnr(30,90.0/180*M_PI,0.3,mission.time)){
+        mission.time=0; n++;
+      }
     }else if(n==5){
-      if(follow_wall(0,20,0.3,mission.time)) mission.state=throwback;
+      if(follow_wall(0,20,0.3,mission.time)){
+        mission.time=0; n++;
+      }
     }else if(n==6){
-      if(turnr(20,90.0/180*M_PI,0.3,mission.time)) mission.state=throwback;
+      if(turnr(20,90.0/180*M_PI,0.3,mission.time)){
+        mission.time=0; n++;
+      }
     }else if(n==7){
-      if(followLineCenter(1,0.2,mission.time)) mission.state=ms_end;
+      if(followLineCenter(1,0.2,mission.time)){
+        mission.time=0; n++;
+      }
     }else if(n==8){
       mission.state=ms_end;
     }
