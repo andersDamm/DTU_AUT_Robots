@@ -344,6 +344,7 @@ if (lmssrv.config) {
   break;
   
   case ms_PushNDrive:
+    printf("n: %d", n);
     if(n==0){
       if(followLineCenter(4,0.3, mission.time)){
         mission.time=0; n++;
@@ -720,7 +721,7 @@ void update_motcon(motiontype *p){
   p->finished = 1;
 }
 }
-printf("IR0: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[0],odo.theta_ref, odo.theta);
+printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_ref, odo.theta);
 }
 
 
