@@ -75,6 +75,7 @@ getinputref (const char *sym_name, symTableElement * tab)
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
 #define K_FOR_FOLLOWLINE 0.1
 #define NUMBER_OF_IRSENSORS 8
+#define CRITICAL_IR_VALUE 0.5
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -127,13 +128,7 @@ void transform(int* input, double* output); // Calibfunction - Calibrates in rel
 int minIntensity();            // Minimum intensity function
 double centerOfGravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 
-//followRightLine - functions:
-followRightLine() // Makes the robot follow the rightmost line when a line devides
-double rightMostSlope() // Determines the value of the sensor at which the slope ends.
-double variance() // Determines the variance of the inputvalues given as an array.
-
-
-
+void rightMostSlope(double* output); // Determines the value of the sensor at which the slope ends.
 
 typedef struct{
   int state,oldstate;
@@ -251,7 +246,7 @@ if (lmssrv.config) {
 }
 
 
-  /* 
+  /*
   /  Read sensors and zero our position.
   */
 rhdSync();
@@ -419,7 +414,7 @@ void update_motcon(motiontype *p){
       case mot_stop:
       p->curcmd=mot_stop;
       break;
-      
+
       case mot_move:
 	p->startpos=(p->left_pos+p->right_pos)/2;
 	p->curcmd=mot_move;
@@ -432,7 +427,7 @@ void update_motcon(motiontype *p){
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turn;
       break;
-      
+
       case mot_followLineCenter:
 	p->curcmd=mot_followLineCenter;
       break;
@@ -556,7 +551,7 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
 	mot.speedcmd = speed;
 	mot.dist = dist;
     return 0;
-  }	
+  }
   else return mot.finished;
 }
 
@@ -601,7 +596,7 @@ void transform(double* output) {
 }
 int minIntensity(){
   int i, index = 0;
-  int min; 
+  int min;
   min = (int)linesensor->data[0];
     for(i = 1; i < NUMBER_OF_IRSENSORS; i++){
       if(linesensor->data[i]< min){
@@ -623,6 +618,16 @@ double centerOfGravity(int* input, int size, char color){
       sumXI += i*input_tmp[i];
   }
   return (double)sumXI/(double)sumI;
+}
+void rightMostSlope(int* output){
+    int i;
+    for(i=1;i<NUMBER_OF_IRSENSORS;i++){
+        if(linesensor->data[i]<CRITICAL_IR_VALUE && linesensor->data[i]>=CRITICAL_IR_VALUE){
+            a = linesensor->data[i]-linesensor->data[i-1];
+            return (crit_val-(double)linesensor->data[i])/a+i;
+        }
+    }
+    return 0;
 }
 
 //Follow rightmost line functions:
