@@ -116,7 +116,7 @@ typedef struct{//input
   double startpos;
 }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter, mot_follow_wall_left, mot_follow_wall_right};
+enum {mot_stop=1,mot_move,mot_turn,mot_turnr,mot_followLineCenter, mot_follow_wall_left, mot_follow_wall_right};
 
 void update_motcon(motiontype *p);
 
@@ -125,6 +125,7 @@ void update_motcon(motiontype *p);
 */
 int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
+int turnr(double radius, double angle, double speed, int time);
 int followLineCenter(double dist, double speed, int time);
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 int follow_wall(int side, double dist, double speed, int time);
@@ -159,7 +160,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_followLineCenter,ms_follow_wall,ms_end};
+enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_follow_wall,ms_end};
 
 int main()
 {
@@ -297,22 +298,31 @@ while (running){
  sm_update(&mission);
  switch (mission.state) {
   case ms_init:
-  n=4; dist=2;angle= - 90.0/180*M_PI;
-  mission.state= ms_follow_wall;
-  break;
+    n=4; dist=0.5;angle= -90.0/180*M_PI;
+    mission.state= ms_turnr;
+    break;
 
   case ms_fwd:
+      if (fwd(dist,0.6,mission.time))  mission.state=ms_turnr; // Square min ven
+  break;
 
-      if (fwd(dist,0.6,mission.time))  mission.state=ms_turn; // Square min ven
-      break;
-
-      case ms_turn:
+  case ms_turn:
       if (turn(angle,0.3,mission.time)){
        n=n-1;
        if (n==0)
          mission.state=ms_end;
        else
          mission.state=ms_fwd;
+     }
+  break;
+
+     case ms_turnr:
+     if(turnr(1,angle,0.6,mission.time)){
+         n=n-1;
+         if(n == 0)
+            mission.state=ms_end;
+         else
+            mission.state=ms_fwd;
      }
      break;
 
@@ -428,6 +438,7 @@ void update_motcon(motiontype *p){
 
   double d, d_angle;
   double IR_dist[5];
+  double delta_l, delta_r;
 
   if (p->cmd !=0){
 
@@ -449,15 +460,23 @@ void update_motcon(motiontype *p){
 	    p->startpos=p->left_pos;
 	p->curcmd=mot_turn;
       break;
-
+      
+      case mot_turnr:
+	if (p->angle > 0)
+	    p->startpos=p->right_pos;
+	else
+	    p->startpos=p->left_pos;
+	p->curcmd=mot_turnr;
+      break;
+      
       case mot_followLineCenter:
 	p->curcmd=mot_followLineCenter;
       break;
-      
+
       case mot_follow_wall_left:
 	p->curcmd=mot_follow_wall_left;
       break;
-      
+
       case mot_follow_wall_right:
 	p->curcmd=mot_follow_wall_right;
       break;
@@ -538,6 +557,38 @@ void update_motcon(motiontype *p){
 	}
     break;
 
+    case mot_turnr:
+        if (p->angle>0){ 		//Turn left
+	   
+	  delta_r = p->dist/(p->dist-p->w/2);
+	  delta_l = p->dist/(p->dist+p->w/2);
+	    
+	    if(p->right_pos-p->startpos >= p->angle*(p->dist+p->w/2)){
+	      p->motorspeed_l=0;
+	      p->motorspeed_r=0;
+	      p->finished=1;
+	    }
+	    else if (p->right_pos-p->startpos < p->angle*(p->dist+p->w/2)){
+	      p->motorspeed_l =  p->speedcmd*delta_l;
+	      p->motorspeed_r =  p->speedcmd*delta_r;
+	    }   
+	}
+	else {
+	  delta_r = p->dist/(p->dist+p->w/2);
+	  delta_l = p->dist/(p->dist-p->w/2);
+	  
+	  if(p->left_pos-p->startpos >= -(p->angle*(p->dist+p->w/2))){
+	      p->motorspeed_l=0;
+	      p->motorspeed_r=0;
+	      p->finished=1;
+	    }
+	    else if (p->left_pos-p->startpos < -( p->angle*(p->dist+p->w/2))){
+	      p->motorspeed_l =  p->speedcmd*delta_l;
+	      p->motorspeed_r =  p->speedcmd*delta_r;
+	    }
+	}
+    break;
+
 	case mot_followLineCenter:
 		if (p->right_pos < p->dist) {
       if(minDistFrontIR() > OBSTACLE_DIST){
@@ -580,7 +631,7 @@ void update_motcon(motiontype *p){
        }
     break;
   }
-  printf("IR0: %f \tIR4: %f \tscmd: %f  ",getDistIR(IR_dist)[0],getDistIR(IR_dist)[4],p->speedcmd);
+  printf("IR0: %f \ttheta_ref: %f \ttheta: %f  ",getDistIR(IR_dist)[0],odo.theta_ref, odo.theta);
 }
 
 
@@ -606,6 +657,19 @@ int turn(double angle, double speed,int time){
   else
     return mot.finished;
 }
+ int turnr(double radius, double angle, double speed, int time){
+     if(time == 0){
+         mot.cmd = mot_turnr;
+         mot.speedcmd = speed;
+         mot.dist = radius;
+         mot.angle = angle;
+	 odo.theta_ref=odo.theta_ref + angle; //Update the desired angle
+         return 0;
+     }
+     else
+         return mot.finished;
+
+ }
 int followLineCenter(double dist, double speed, int time){   // linesensor input???
   if(time == 0){
 	mot.cmd = mot_followLineCenter;
