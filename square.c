@@ -73,7 +73,9 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define CONVERSION_FACTOR_ACC 0.01
 #define K_FOR_STRAIGHT_DIRECTION_CONTROL 1
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
-#define K_FOR_FOLLOWLINE 0.1
+#define KP_FOR_FOLLOWLINE 0.1
+#define KI_FOR_FOLLOWLINE 0.001
+#define KD_FOR_FOLLOWLINE 0.0001
 #define K_FOLLOW_WALL 0.005
 #define NUMBER_OF_IRSENSORS 8
 #define CRITICAL_IR_VALUE 0.5
@@ -98,8 +100,6 @@ typedef struct{ //input signals
   void update_odo(odotype *p);
   int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size);
 
-
-
 /********************************************
 * Motion control
 */
@@ -119,6 +119,9 @@ typedef struct{//input
   int finished;
 		// internal variables
   double startpos;
+  //Errors
+  double error_current, error_old, error_sum;
+
 }motiontype;
 
 enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,mot_followRightLine,mot_followLeftLine, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse};
@@ -146,9 +149,9 @@ double centerOfGravity(char color);  // Finding the line with centre of gravity 
 double leftMostNegSlope();
 double leftMostPosSlope();
 
-// Returns a number from 0 to 7, which indicates the position 
+// Returns a number from 0 to 7, which indicates the position
 // at which the right most negative slope begins.
-double rightMostNegSlope();	
+double rightMostNegSlope();
 double minDistFrontIR();         // Finds the shortest distance to an object in front, measured by the IR sensor, in cm
 double* getDistIR(double* dist);             // Returns the distance all IR's measure, in an array[5], measured in cm.
 
@@ -157,8 +160,8 @@ double* getDistIR(double* dist);             // Returns the distance all IR's me
 double Ka_IR[5] = {1634.64672091309,1634.64672091309, 1634.64672091309,1634.64672091309,1634.64672091309};
 double Kb_IR[5] = {73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393};
 
-									      
-// Returns a number from 0 to 7, which indicates the position 
+
+// Returns a number from 0 to 7, which indicates the position
 // at which the right most positive slope begins.
 double rightMostPosSlope();
 char stopLine();
@@ -181,6 +184,7 @@ symTableElement *lenc,*renc,*linesensor,*irsensor, *speedl,*speedr,*resetmotorr,
 odotype odo;
 smtype mission;
 motiontype mot;
+pid_error_type pid_error;
 
 enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_PushNDrive,ms_end};
 
@@ -370,7 +374,7 @@ switch (mission.state) {
   printf("No data logged\n");
 }
   break;
-  
+
   case ms_PushNDrive:
     printf("n: %d ", n);
     if(n==0){
@@ -498,11 +502,13 @@ void update_odo(odotype *p)
 
 
 void update_motcon(motiontype *p){
-    double d, d_angle;
+    double d, d_angle,pid;
   double IR_dist[5];
   double delta_l, delta_r;
     if (p->cmd !=0){
         p->finished=0;
+        p->error_sum=0;
+        p->error_old=0;
         switch (p->cmd){
             case mot_stop:
             	p->curcmd=mot_stop;
@@ -532,10 +538,9 @@ void update_motcon(motiontype *p){
        p->startpos=p->left_pos;
      p->curcmd=mot_turnr;
      break;
-
      case mot_followLineCenter:
-				p->startpos=p->left_pos;
-     p->curcmd=mot_followLineCenter;
+         p->startpos=p->left_pos;
+         p->curcmd=mot_followLineCenter;
      break;
 
      case mot_follow_wall_left:
@@ -545,11 +550,11 @@ void update_motcon(motiontype *p){
      case mot_follow_wall_right:
      p->curcmd=mot_follow_wall_right;
      break;
-	    
+
 	    case mot_followRightLine:
             	p->curcmd=mot_followRightLine;
             break;
-	    
+
 	    case mot_followLeftLine:
             	p->curcmd=mot_followLeftLine;
             break;
@@ -687,23 +692,28 @@ void update_motcon(motiontype *p){
     break;
 
     case mot_followLineCenter:
-            if (!(stopLine()) && p->left_pos - p->startpos < p->dist) {
-        if(minDistFrontIR() > OBSTACLE_DIST){
-            p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
-            p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
+        //update error
+        p->error_old = p->error_current;
+        p->error_current = minIntensity()-3.5;
+        p->error_sum += p->error_current;
+        pid = KP_FOR_FOLLOWLINE*p->error_current+KI_FOR_FOLLOWLINE*p->error_sum+KD_FOR_FOLLOWLINE*(p->error_current-p->error_old);
+        if (!(stopLine()) && p->left_pos - p->startpos < p->dist) {
+            if(minDistFrontIR() > OBSTACLE_DIST){
+                p->motorspeed_l = p->speedcmd - pid;
+                p->motorspeed_r = p->speedcmd + pid;
+            }
+            else if(minDistFrontIR() <= OBSTACLE_DIST){
+                p->motorspeed_l = 0;
+                p->motorspeed_r = 0;
+                p->finished = 1;
+            }
         }
-       else if(minDistFrontIR() <= OBSTACLE_DIST){
-        p->motorspeed_l = 0;
-        p->motorspeed_r = 0;
-        p->finished = 1;
-      }
-    }
-    else {
-        p->motorspeed_l = 0;
-        p->motorspeed_r = 0;
-        p->finished = 1;
-      }
-    break;
+        else {
+            p->motorspeed_l = 0;
+            p->motorspeed_r = 0;
+            p->finished = 1;
+        }
+        break;
 
   case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
   if(getDistIR(IR_dist)[0] < 70){
@@ -728,7 +738,7 @@ void update_motcon(motiontype *p){
     p->finished = 1;
   }
   break;
-                
+
   case mot_follow_wall_right:
   if(getDistIR(IR_dist)[4] < 70){
     p->motorspeed_l=p->speedcmd + K_FOLLOW_WALL*(getDistIR(IR_dist)[4] - p->dist);
@@ -765,7 +775,7 @@ void update_motcon(motiontype *p){
 }
             break;
 printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_ref, odo.theta);
-	    
+
 	case mot_followLeftLine:
             if (stopLine()==0) {
                 p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
@@ -980,7 +990,7 @@ double rightMostNegSlope() {
 	return -1;
 }
 double rightMostPosSlope(){
-	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins. 
+	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins.
     int i;
     double input[NUMBER_OF_IRSENSORS], a;
     getTransformedIRData(input);
@@ -1008,7 +1018,7 @@ double leftMostNegSlope() {
 	return -1;
 }
 double leftMostPosSlope(){
-	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins. 
+	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins.
     int i;
     double input[NUMBER_OF_IRSENSORS], a;
     getTransformedIRData(input);
@@ -1037,6 +1047,3 @@ char stopLine(){
 	printf("Stopline detected!,%d\n",count);
   return count>CRIT_NR_BLACK_LINE ? 1 : 0;
 }
-
-
-
