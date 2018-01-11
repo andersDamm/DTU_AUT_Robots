@@ -121,8 +121,7 @@ typedef struct{//input
   double startpos;
 }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse};
-enum {mot_stop=1,mot_move,mot_turn,mot_followLineCenter,mot_followRightLine,mot_followLeftLine};
+enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,mot_followRightLine,mot_followLeftLine, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse};
 
 void update_motcon(motiontype *p);
 
@@ -136,8 +135,9 @@ int followLineCenter(double dist, double speed, int time);
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 int follow_wall(int side, double dist, double speed, int time);
 
-/********************************************
+
 void getTransformedIRData(double* output); // Calibfunction - Calibrates in relation to black_mean.
+/********************************************
 * Sensor functions and variables
 */
 int minIntensity();             // Minimum intensity function
@@ -763,14 +763,8 @@ void update_motcon(motiontype *p){
   p->motorspeed_r = 0;
   p->finished = 1;
 }
-            else {
-                p->motorspeed_l = 0;
-                p->motorspeed_r = 0;
-                p->finished = 1;
-            }
             break;
 printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_ref, odo.theta);
-}
 	    
 	case mot_followLeftLine:
             if (stopLine()==0) {
