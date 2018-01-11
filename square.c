@@ -75,13 +75,13 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
 #define KP_FOR_FOLLOWLINE 0.1
 #define KI_FOR_FOLLOWLINE 0.001
-#define KD_FOR_FOLLOWLINE 0.0001
+#define KD_FOR_FOLLOWLINE 0.001
 #define K_FOLLOW_WALL 0.005
 #define NUMBER_OF_IRSENSORS 8
 #define CRITICAL_IR_VALUE 0.5
 #define OBSTACLE_DIST 20
 #define CRITICAL_BLACK_VALUE 0.8
-#define IS_SIMULATION 1 //1=simulation, 0=real world
+#define IS_SIMULATION 1 //0=simulation, 1=real world
 #define CRIT_NR_BLACK_LINE 6
 
 
@@ -323,8 +323,8 @@ if (lmssrv.connected){
 sm_update(&mission);
 switch (mission.state) {
   case ms_init:
-  n=0; dist=0.5;angle= -90.0/180*M_PI;
-  mission.state= ms_PushNDrive;
+  n=0; dist=10;angle= -90.0/180*M_PI;
+  mission.state= ms_followLineCenter;
   break;
 
   case ms_fwd:
@@ -352,7 +352,7 @@ switch (mission.state) {
   break;
 
   case ms_followLineCenter:
-    if (followLineCenter(dist,0.1,mission.time)) mission.state = ms_end;
+    if (followLineCenter(dist,0.4,mission.time)) mission.state = ms_end;
   break;
 
   case ms_follow_wall: //Side = 0 = left   Side = 1 = right   Side = 2 = middle
@@ -694,8 +694,9 @@ void update_motcon(motiontype *p){
     case mot_followLineCenter:
         //update error
         p->error_old = p->error_current;
-        p->error_current = minIntensity()-3.5;
+        p->error_current = centerOfGravity(0)-3.5;
         p->error_sum += p->error_current;
+		printf("COG: %f \tError_C: %f\n", centerOfGravity(0),p->error_current);
         pid = KP_FOR_FOLLOWLINE*p->error_current+KI_FOR_FOLLOWLINE*p->error_sum+KD_FOR_FOLLOWLINE*(p->error_current-p->error_old);
         if (!(stopLine()) && p->left_pos - p->startpos < p->dist) {
             if(minDistFrontIR() > OBSTACLE_DIST){
@@ -936,17 +937,18 @@ return index;
 //color: 0=black, 1=white
 double centerOfGravity(char color){
   // Input is raw data from linesensors. Between each photoLED exist one "i";
-    int sumI = 0, sumXI=0, i;
+    double sumI = 0, sumXI=0;
+    int i;
     double input[NUMBER_OF_IRSENSORS];
     getTransformedIRData(input);
-    for(i = 0; i< NUMBER_OF_IRSENSORS; i++){
+    /*for(i = 0; i< NUMBER_OF_IRSENSORS; i++){
         input[i] = color==0 ? 1-input[i] : input[i];    // 0 is black, everything else is white.
-    }
+    }*/
     for(i=0; i < NUMBER_OF_IRSENSORS; i++){
         sumI += input[i];
         sumXI += i*input[i];
     }
-    return (double)sumXI/(double)sumI;
+    return sumXI/sumI;
   }
 
 
