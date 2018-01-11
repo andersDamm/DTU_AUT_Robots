@@ -74,6 +74,10 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define K_FOR_STRAIGHT_DIRECTION_CONTROL 1
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
 #define K_FOR_FOLLOWLINE 0.1
+//Set as SIM: [0.1 0.001 0.001]   RW: [0.1 0 0.001]
+#define KP_FOR_FOLLOWLINE 0.1
+#define KI_FOR_FOLLOWLINE 0.00
+#define KD_FOR_FOLLOWLINE 0.001
 #define K_FOLLOW_WALL 0.005
 #define NUMBER_OF_IRSENSORS 8
 #define CRITICAL_IR_VALUE 0.5
@@ -119,6 +123,9 @@ typedef struct{//input
   int finished;
 		// internal variables
   double startpos;
+  //Errors
+  double error_current, error_old, error_sum;
+
 }motiontype;
 
 enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,mot_followRightLine,mot_followLeftLine, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse, mot_detect_line};
@@ -527,11 +534,13 @@ void update_odo(odotype *p)
 
 
 void update_motcon(motiontype *p){
-    double d, d_angle;
+    double d, d_angle,pid;
   double IR_dist[5];
   double delta_l, delta_r;
     if (p->cmd !=0){
         p->finished=0;
+        p->error_sum=0;
+        p->error_old=0;
         switch (p->cmd){
             case mot_stop:
             	p->curcmd=mot_stop;
@@ -735,23 +744,29 @@ void update_motcon(motiontype *p){
     break;
 
     case mot_followLineCenter:
-            if (!(stopLine()) && p->left_pos - p->startpos < p->dist) {
-        if(minDistFrontIR() > OBSTACLE_DIST){
-            p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
-            p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
+        //update error
+        p->error_old = p->error_current;
+        p->error_current = centerOfGravity(0)-3.5;
+        p->error_sum += p->error_current;
+        pid = KP_FOR_FOLLOWLINE*p->error_current+KI_FOR_FOLLOWLINE*p->error_sum+KD_FOR_FOLLOWLINE*(p->error_current-p->error_old);
+        if (!(stopLine()) && p->left_pos - p->startpos < p->dist) {
+            if(minDistFrontIR() > OBSTACLE_DIST){
+                p->motorspeed_l = p->speedcmd - pid;
+                p->motorspeed_r = p->speedcmd + pid;
+            }
+            else if(minDistFrontIR() <= OBSTACLE_DIST && 0){ //Remove && 0 to enable obst det.
+				printf("Wall detected\n");
+                p->motorspeed_l = 0;
+                p->motorspeed_r = 0;
+                p->finished = 1;
+            }
         }
-       else if(minDistFrontIR() <= OBSTACLE_DIST){
-        p->motorspeed_l = 0;
-        p->motorspeed_r = 0;
-        p->finished = 1;
-      }
-    }
-    else {
-        p->motorspeed_l = 0;
-        p->motorspeed_r = 0;
-        p->finished = 1;
-      }
-    break;
+        else {
+            p->motorspeed_l = 0;
+            p->motorspeed_r = 0;
+            p->finished = 1;
+        }
+        break;
 
   case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
   if(getDistIR(IR_dist)[0] < 70){
@@ -816,8 +831,8 @@ printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_r
 	    
 	case mot_followLeftLine:
             if (stopLine()==0) {
-                p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
-                p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
+                p->motorspeed_l = p->speedcmd - KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
+                p->motorspeed_r = p->speedcmd + KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
             }
             else {
                 p->motorspeed_l = 0;
@@ -974,17 +989,18 @@ return index;
 //color: 0=black, 1=white
 double centerOfGravity(char color){
   // Input is raw data from linesensors. Between each photoLED exist one "i";
-    int sumI = 0, sumXI=0, i;
+    double sumI = 0, sumXI=0;
+    int i;
     double input[NUMBER_OF_IRSENSORS];
     getTransformedIRData(input);
-    for(i = 0; i< NUMBER_OF_IRSENSORS; i++){
+    /*for(i = 0; i< NUMBER_OF_IRSENSORS; i++){
         input[i] = color==0 ? 1-input[i] : input[i];    // 0 is black, everything else is white.
-    }
+    }*/
     for(i=0; i < NUMBER_OF_IRSENSORS; i++){
         sumI += input[i];
         sumXI += i*input[i];
     }
-    return (double)sumXI/(double)sumI;
+    return sumXI/sumI;
   }
 
 
