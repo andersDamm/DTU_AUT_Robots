@@ -77,7 +77,6 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define KP_FOR_FOLLOWLINE 0.1
 #define KI_FOR_FOLLOWLINE 0.00
 #define KD_FOR_FOLLOWLINE 0.001
-
 #define K_FOLLOW_WALL 0.005
 #define NUMBER_OF_IRSENSORS 8
 #define CRITICAL_IR_VALUE 0.5
