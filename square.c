@@ -79,7 +79,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define CRITICAL_IR_VALUE 0.5
 #define OBSTACLE_DIST 20
 #define CRITICAL_BLACK_VALUE 0.8
-#define IS_SIMULATION 1 //1=simulation, 0=real world
+#define IS_SIMULATION 0 //0=simulation, 1=real world
 #define CRIT_NR_BLACK_LINE 6
 
 
@@ -121,7 +121,7 @@ typedef struct{//input
   double startpos;
 }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,mot_followRightLine,mot_followLeftLine, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse};
+enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,mot_followRightLine,mot_followLeftLine, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse, mot_detect_line};
 
 void update_motcon(motiontype *p);
 
@@ -162,6 +162,7 @@ double Kb_IR[5] = {73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153
 // at which the right most positive slope begins.
 double rightMostPosSlope();
 char stopLine();
+char detectLine();
 int followRightLine(double dist, double speed, int time);
 
 int followLeftLine(double dist, double speed, int time);
@@ -320,11 +321,11 @@ sm_update(&mission);
 switch (mission.state) {
   case ms_init:
   n=0; dist=0.5;angle= -90.0/180*M_PI;
-  mission.state= ms_PushNDrive;
+  mission.state= ms_PushNDrive ;
   break;
 
   case ms_fwd:
-      if (fwd(dist,0.6,mission.time)){  mission.state=ms_turnr;} // Square min ven
+      if (fwd(dist,0.6,mission.time)){  mission.state=ms_turn;} // Square min ven
   break;
 
   case ms_turn:
@@ -382,32 +383,60 @@ switch (mission.state) {
         mission.time=-1; n=2;
       }
     }else if(n==2){
-      if(fwd(0.75,-0.3,mission.time)){
-        mission.time=-1; n++;
+      if(fwd(0.85,-0.3,mission.time)){
+        mission.time=-1; n = 3;
       }
     }else if(n==3){
       if(turn(-90.0/180*M_PI,0.3,mission.time)){
-        mission.time=-1; n++;
+        mission.time=-1; n = 4;
       }
-    }else if(n==4){
-      if(turnr(0.40,90.0/180*M_PI,0.1,mission.time)){
-        mission.time=-1; n++;
+    }else if(n==4){                                      // Drive till line found
+      if(fwd(0,0.2,mission.time)){
+        mission.time=-1; n = 5;
       }
     }else if(n==5){
-      if(follow_wall(0,20,0.1,mission.time)){
-        mission.time=-1; n++;
+      if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
+        mission.time=-1; n = 6;
       }
     }else if(n==6){
-      if(turnr(0.30,90.0/180*M_PI,0.1,mission.time)){
-        mission.time=-1; n++;
-      }
-    }else if(n==7){
       if(followLineCenter(1,0.2,mission.time)){
-        mission.time=-1; n++;
+        mission.time=-1; n = 7;
       }
-    }else if(n==8){
-      mission.state=ms_end;
     }
+     else if(n==7){
+      if(fwd(0.1,0.2,mission.time)){
+	mission.time = -1; n = 8;
+      }
+    }
+    else if(n==8){
+      if(turn(90.0/180*M_PI,0.3,mission.time)){
+	mission.time = -1; n = 9;
+      }
+    }
+    else if(n==9){
+      if(followLineCenter(2,0.3,mission.time)){
+        mission.time=-1; n = 11;
+      }
+    }
+     else if(n==11){
+      if(fwd(0.20,0.3,mission.time)){
+        mission.time=-1; n = 12;
+      }
+     }
+     else if(n==12){
+      if(followRightLine(0.8,0.3,mission.time)){
+        mission.time=-1; n = 13;
+      }
+     }
+     else if(n==13){
+     if(followLineCenter(5,0.4,mission.time)){
+       mission.time =-1; n= 14;
+	}
+      }	
+      else if(n == 14){
+	mission.state=ms_end;
+      }
+    
   break;
 }
 
@@ -512,7 +541,11 @@ void update_motcon(motiontype *p){
       p->startpos=(p->left_pos+p->right_pos)/2;
       if(p->speedcmd < 0){
         p->curcmd=mot_reverse;
-      } else{
+      }
+      else if(p->dist == 0){ // Activate move to detecting line
+	p->curcmd = mot_detect_line;
+      } 
+      else{
         p->curcmd=mot_move;
       }
             break;
@@ -534,8 +567,8 @@ void update_motcon(motiontype *p){
      break;
 
      case mot_followLineCenter:
-				p->startpos=p->left_pos;
-     p->curcmd=mot_followLineCenter;
+        p->startpos=(p->left_pos+p->right_pos)/2;
+        p->curcmd=mot_followLineCenter;
      break;
 
      case mot_follow_wall_left:
@@ -546,13 +579,15 @@ void update_motcon(motiontype *p){
      p->curcmd=mot_follow_wall_right;
      break;
 	    
-	    case mot_followRightLine:
-            	p->curcmd=mot_followRightLine;
-            break;
-	    
-	    case mot_followLeftLine:
-            	p->curcmd=mot_followLeftLine;
-            break;
+    case mot_followRightLine:
+	p->curcmd=mot_followRightLine;
+	p->startpos=(p->left_pos+p->right_pos)/2;
+    break;
+
+    case mot_followLeftLine:
+	p->curcmd=mot_followLeftLine;
+	p->startpos=(p->left_pos+p->right_pos)/2;
+    break;
 
      case mot_follow_wall_between:
      p->curcmd=mot_follow_wall_between;
@@ -610,6 +645,19 @@ void update_motcon(motiontype *p){
         p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
       }
     break;
+    
+    case mot_detect_line:
+      
+      if(!(detectLine())){
+	 p->motorspeed_l=p->speedcmd;
+	 p->motorspeed_r=p->speedcmd;
+      }
+      else{
+	p->finished=1;
+        p->motorspeed_l=0;
+        p->motorspeed_r=0;
+      }
+      break;
 
     case mot_turn:
             if (p->angle>0){ 		//Turn left
@@ -717,17 +765,17 @@ void update_motcon(motiontype *p){
   }
   break;
 
-        case mot_followRightLine:
-            if (p->right_pos < p->dist) {
-                p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
-                p->motorspeed_r = p->speedcmd  + K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
-                }
-  else{
-    p->motorspeed_l = 0;
-    p->motorspeed_r = 0;
-    p->finished = 1;
-  }
-  break;
+    case mot_followRightLine:
+      if (p->right_pos - p->startpos < p->dist && !(stopLine())) {
+	p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
+	p->motorspeed_r = p->speedcmd  + K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
+      }
+      else{
+	p->motorspeed_l = 0;
+	p->motorspeed_r = 0;
+	p->finished = 1;
+      }
+    break;
                 
   case mot_follow_wall_right:
   if(getDistIR(IR_dist)[4] < 70){
@@ -1036,6 +1084,19 @@ char stopLine(){
   if(count>CRIT_NR_BLACK_LINE)
 	printf("Stopline detected!,%d\n",count);
   return count>CRIT_NR_BLACK_LINE ? 1 : 0;
+}
+char detectLine(){
+  int i,count=0;
+  double input[NUMBER_OF_IRSENSORS];
+  getTransformedIRData(input);
+  for(i=0;i<NUMBER_OF_IRSENSORS;i++){
+      if(input[i]>CRITICAL_BLACK_VALUE){
+          count++;
+      }
+  }
+  if(count>2)
+	printf("Stopline detected!,%d\n",count);
+  return count>2 ? 1 : 0;
 }
 
 
