@@ -304,6 +304,18 @@ if (lmssrv.connected){
   running=1;
   mission.state=ms_init;
   mission.oldstate=-1;
+
+if(IS_SIMULATION){
+    Ka_IR = [1634.64672091309,1634.64672091309, 1634.64672091309,1634.64672091309,1634.64672091309];
+    Kb_IR = [73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393];
+} else{
+    Ka_IR = [1523.280675968216, 1523.280675968216, 1478.278602346147, 1515.870801518367, 1515.870801518367];
+    Kb_IR = [93.590281110006, 93.590281110006, 94.007320920384, 92.744874767269, 92.744874767269];
+}
+  /*
+   * Run loop
+  */
+
   while (running){
     if (lmssrv.config && lmssrv.status && lmssrv.connected){
       while ( (xml_in_fd(xmllaser,lmssrv.sockfd) >0))
@@ -321,6 +333,7 @@ if (lmssrv.connected){
     odo.right_enc=renc->data[0];
     update_odo(&odo);
 
+
   /****************************************
   / mission statemachine
   */
@@ -328,7 +341,11 @@ sm_update(&mission);
 switch (mission.state) {
     case ms_init:
         n=0; dist=0.5;angle= -90.0/180*M_PI;
-        mission.state= ms_PushNDrive ;
+        if(IS_SIMULATION){
+            mission.state=ms_PushNDrive_SIM;
+        } else{
+            mission.state= ms_PushNDrive_RW;
+        }
     break;
 
     case ms_fwd:
@@ -379,7 +396,7 @@ switch (mission.state) {
 }
   break;
   
-  case ms_PushNDrive:
+  case ms_PushNDrive_SIM:
     printf("n: %d ", n);
     if(n==0){
       if(followLineCenter(4,0.3, mission.time)){
@@ -443,7 +460,72 @@ switch (mission.state) {
       else if(n == 14){
 	mission.state=ms_end;
       }
-    
+  break;
+
+  case ms_PushNDrive_RW:
+    printf("n: %d ", n);
+    if(n==0){
+      if(followLineCenter(4,0.3, mission.time)){
+        mission.time=-1; n=1;
+      }
+    }else if(n==1){
+      if(fwd(0.50,0.3,mission.time)){
+        mission.time=-1; n=2;
+      }
+    }else if(n==2){
+      if(fwd(0.85,-0.3,mission.time)){
+        mission.time=-1; n = 3;
+      }
+    }else if(n==3){
+      if(turn(-90.0/180*M_PI,0.3,mission.time)){
+        mission.time=-1; n = 4;
+      }
+    }else if(n==4){                                      // Drive till line found
+      if(fwd(0,0.2,mission.time)){
+        mission.time=-1; n = 5;
+      }
+    }else if(n==5){
+      if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
+        mission.time=-1; n = 6;
+      }
+    }else if(n==6){
+      if(followLineCenter(1,0.2,mission.time)){
+        mission.time=-1; n = 7;
+      }
+    }
+     else if(n==7){
+      if(fwd(0.1,0.2,mission.time)){
+    mission.time = -1; n = 8;
+      }
+    }
+    else if(n==8){
+      if(turn(90.0/180*M_PI,0.3,mission.time)){
+    mission.time = -1; n = 9;
+      }
+    }
+    else if(n==9){
+      if(followLineCenter(2,0.3,mission.time)){
+        mission.time=-1; n = 11;
+      }
+    }
+     else if(n==11){
+      if(fwd(0.20,0.3,mission.time)){
+        mission.time=-1; n = 12;
+      }
+     }
+     else if(n==12){
+      if(followRightLine(0.8,0.3,mission.time)){
+        mission.time=-1; n = 13;
+      }
+     }
+     else if(n==13){
+     if(followLineCenter(5,0.4,mission.time)){
+       mission.time =-1; n= 14;
+    }
+      } 
+      else if(n == 14){
+    mission.state=ms_end;
+      }
   break;
 }
 
