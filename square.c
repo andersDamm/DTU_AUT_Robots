@@ -159,10 +159,10 @@ double rightMostNegSlope();
 double minDistFrontIR();         // Finds the shortest distance to an object in front, measured by the IR sensor, in cm
 double* getDistIR(double* dist);             // Returns the distance all IR's measure, in an array[5], measured in cm.
 
-//double  Ka_IR[5] = {1523.280675968216, 1523.280675968216, 1478.278602346147, 1515.870801518367, 1515.870801518367};
-//double  Kb_IR[5] = {93.590281110006, 93.590281110006, 94.007320920384, 92.744874767269, 92.744874767269};
-double Ka_IR[5] = {1634.64672091309,1634.64672091309, 1634.64672091309,1634.64672091309,1634.64672091309};
-double Kb_IR[5] = {73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393};
+double Ka_IR[5] = {1523.280675968216, 1523.280675968216, 1478.278602346147, 1515.870801518367, 1515.870801518367};
+double Kb_IR[5] = {93.590281110006, 93.590281110006, 94.007320920384, 92.744874767269, 92.744874767269};
+double Ka_IR_sim[5] = {1634.64672091309,1634.64672091309, 1634.64672091309,1634.64672091309,1634.64672091309};
+double Kb_IR_sim[5] = {73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393};
 
 									      
 // Returns a number from 0 to 7, which indicates the position 
@@ -190,7 +190,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_PushNDrive,ms_end};
+enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end};
 
 int main()
 {
@@ -306,11 +306,10 @@ if (lmssrv.connected){
   mission.oldstate=-1;
 
 if(IS_SIMULATION){
-    Ka_IR = [1634.64672091309,1634.64672091309, 1634.64672091309,1634.64672091309,1634.64672091309];
-    Kb_IR = [73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393];
-} else{
-    Ka_IR = [1523.280675968216, 1523.280675968216, 1478.278602346147, 1515.870801518367, 1515.870801518367];
-    Kb_IR = [93.590281110006, 93.590281110006, 94.007320920384, 92.744874767269, 92.744874767269];
+	for(n=0;n<5;n++){
+    	Ka_IR[n] = Ka_IR_sim[n];
+    	Kb_IR[n] = Kb_IR_sim[n];
+	}
 }
   /*
    * Run loop
