@@ -184,7 +184,7 @@ symTableElement *lenc,*renc,*linesensor,*irsensor, *speedl,*speedr,*resetmotorr,
 odotype odo;
 smtype mission;
 motiontype mot;
-pid_error_type pid_error;
+
 
 enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_PushNDrive,ms_end};
 
@@ -729,8 +729,8 @@ void update_motcon(motiontype *p){
 
         case mot_followRightLine:
             if (p->right_pos < p->dist) {
-                p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
-                p->motorspeed_r = p->speedcmd  + K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
+                p->motorspeed_l = p->speedcmd - KP_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
+                p->motorspeed_r = p->speedcmd  + KP_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
                 }
   else{
     p->motorspeed_l = 0;
@@ -778,8 +778,8 @@ printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_r
 
 	case mot_followLeftLine:
             if (stopLine()==0) {
-                p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
-                p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
+                p->motorspeed_l = p->speedcmd - KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
+                p->motorspeed_r = p->speedcmd + KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
             }
             else {
                 p->motorspeed_l = 0;
