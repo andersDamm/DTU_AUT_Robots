@@ -73,9 +73,11 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define CONVERSION_FACTOR_ACC 0.01
 #define K_FOR_STRAIGHT_DIRECTION_CONTROL 1
 #define K_FOR_ACCELERATING_DIRECTION_CONTROL 0.001
+//Set as SIM: [0.1 0.001 0.001]   RW: [0.1 0 0.001]
 #define KP_FOR_FOLLOWLINE 0.1
-#define KI_FOR_FOLLOWLINE 0.001
+#define KI_FOR_FOLLOWLINE 0.00
 #define KD_FOR_FOLLOWLINE 0.001
+
 #define K_FOLLOW_WALL 0.005
 #define NUMBER_OF_IRSENSORS 8
 #define CRITICAL_IR_VALUE 0.5
@@ -352,7 +354,7 @@ switch (mission.state) {
   break;
 
   case ms_followLineCenter:
-    if (followLineCenter(dist,0.4,mission.time)) mission.state = ms_end;
+    if (followLineCenter(dist,0.2,mission.time)) mission.state = ms_end;
   break;
 
   case ms_follow_wall: //Side = 0 = left   Side = 1 = right   Side = 2 = middle
@@ -696,14 +698,14 @@ void update_motcon(motiontype *p){
         p->error_old = p->error_current;
         p->error_current = centerOfGravity(0)-3.5;
         p->error_sum += p->error_current;
-		printf("COG: %f \tError_C: %f\n", centerOfGravity(0),p->error_current);
         pid = KP_FOR_FOLLOWLINE*p->error_current+KI_FOR_FOLLOWLINE*p->error_sum+KD_FOR_FOLLOWLINE*(p->error_current-p->error_old);
         if (!(stopLine()) && p->left_pos - p->startpos < p->dist) {
             if(minDistFrontIR() > OBSTACLE_DIST){
                 p->motorspeed_l = p->speedcmd - pid;
                 p->motorspeed_r = p->speedcmd + pid;
             }
-            else if(minDistFrontIR() <= OBSTACLE_DIST){
+            else if(minDistFrontIR() <= OBSTACLE_DIST && 0){ //Remove && 0 to enable obst det.
+				printf("Wall detected\n");
                 p->motorspeed_l = 0;
                 p->motorspeed_r = 0;
                 p->finished = 1;
