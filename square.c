@@ -92,6 +92,14 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define CRIT_NR_BLACK_LINE 6
 #define DONT_CARE 0
 
+/* 	DB_STOPCOND
+* 	fwd: 				0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+* 	followLineCenter: 	0=stopline, 1=dist, 2=object in front
+*	
+*
+*/
+
+
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -361,10 +369,10 @@ switch (mission.state) {
 	case ms_init:
 		n=0; dist=0.5;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
-            mission.state=ms_PushNDrive_SIM;
+            mission.state=ms_last_box;
             printf("Beginning the box-moving in the sim!\n");
         } else{
-            mission.state= ms_PushNDrive_RW;
+            mission.state= ms_last_box;
         }
 	break;
 
@@ -643,22 +651,32 @@ switch (mission.state) {
 
   case ms_last_box:
   	if(n==0){	//follow black line until walldetection 2
-  		if(followLineCenter(0.2, 0.3,2, mission.time)){
+  		if(followLineCenter(1, 0.3,2, mission.time)){
   			mission.time = -1;
   			n=1;
   		}
+		printf("n = %d\n", n);
   	}			//turn 90 degrees CCW
   	else if(n==1){
 		if(turn(90/180*M_PI, 0.1,mission.time)){
 			mission.time = -1;
 			n = 2;
 		}
+		printf("n = %d\n", n);
 	}
 	else if(n==2){
 		if(follow_wall(1, 0.2, 0.3, 0, mission.time)){
 			mission.time = -1;
 			n = 3;
 		}
+		printf("n = %d\n", n);
+	}
+	else if(n==3){
+		if(fwd(0.2, 0.3, 0, mission.time)){
+			mission.time = -1;
+			n = 4;
+		}
+		printf("n = %d\n", n);
 	}
   	
 }
@@ -672,8 +690,6 @@ switch (mission.state) {
 	 poseTimeLog_a[counter].y = odo.y_pos;
 	 poseTimeLog_a[counter].theta = odo.theta;
 	 counter++;
-   } else{
-	 printf("array out of bounds\n");
    }
 
 /*  end of mission  */
@@ -1003,7 +1019,7 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
-			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIST){
+			else if(p->stop_condition==2 && minDistFrontIR() > 1){
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
@@ -1087,9 +1103,9 @@ void update_motcon(motiontype *p){
 		            p->motorspeed_r=p->speedcmd + pid;
 		        }
 		        else{
-		            p->motorspeed_l = 0;
-		            p->motorspeed_r = 0;
-		            p->finished = 1;
+		        	p->motorspeed_l = 0;
+		        	p->motorspeed_r = 0;
+		        	p->finished = 1;
 		        }
 		    } if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
 		        if(pid > p->speedcmd){                      //Speedlimit
@@ -1170,16 +1186,16 @@ int fwd(double dist, double speed, int condition,int time){
 		return mot.finished;
 }
 int turn(double angle, double speed,int time){
-  if (time==0){
-	mot.cmd=mot_turn;
-	mot.speedcmd=speed;
-	mot.angle=angle;
-	mot.start_angle=odo.theta;
-	odo.theta_ref=odo.theta_ref + angle; //Update the desired angle
-	return 0;
-}
-else
-	return mot.finished;
+ 	if (time==0){
+		mot.cmd=mot_turn;
+		mot.speedcmd=speed;
+		mot.angle=angle;
+		mot.start_angle=odo.theta;
+		odo.theta_ref=odo.theta_ref + angle; //Update the desired angle
+		return 0;
+	}
+	else
+		return mot.finished;
 }
 int turnr(double radius, double angle, double speed, int time){
  if(time == 0){
