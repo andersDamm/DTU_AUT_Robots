@@ -642,6 +642,50 @@ switch (mission.state) {
 	}
     break;
 
+    case ms_wall_gate:
+        if(n==0){ //Turn the same way as the line
+            if(turnr(0.1,90.0/180*M_PI,0.3,mission.time)){
+                mission.time =-1; n=1;
+            }
+        } else if(n==1){  //Follow the line through the first gate, 0=distance
+            if(followLineCenter(0.5, 0.2, 0, mission.time)){  // TODO: Update distance to match RW or SIM
+                mission.time =-1; n=2;
+            }
+        } else if(n==2){  // Turn to wall
+            if(turnr(0.2,100/180*M_PI,0.3,mission.time)){
+                mission.time =-1; n=3;
+            }
+        } else if(n==3){ //Follow wall till inside gate, s=0=left, cond=1
+            if(follow_wall(0, 4, 0.1, 1, mission.time)){ // Stopcon: 0 for hole in wall, 1 for object on the other side
+                mission.time =-1; n=4;
+            } 
+        } else if(n==4){
+            if(followLineCenter(4, 0.2, 0, mission.time)){  // Cond: 0 for stopline, 1 for dist, 2 for object in front
+                mission.time =-1; n=5;
+            }
+        } else if(n==5){
+            if(turnr(0.2,90/180*M_PI,0.3,mission.time)){
+                mission.time =-1; n=6;
+            }
+        } else if(n==6){
+            if(followLineCenter(4, 0.2, 0, mission.time)){
+                mission.time =-1; n=7
+            }
+        } else if(n==7){
+            if(turnr(0.2,90/180*M_PI,0.3,mission.time)){
+                mission.time =-1; n=8;
+            }
+        } else if(n==8){
+            if(followLineCenter(4, 0.2, 0, mission.time)){
+                mission.time =-1; n=7
+            }
+        } else if(n>8){
+            mission.state=ms_end;
+        }
+
+
+    break;
+
   case ms_last_box:
   	if(n==0){	//follow black line until walldetection 2
   		if(followLineCenter(0.2, 0.3,2, mission.time)){
