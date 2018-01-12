@@ -79,9 +79,9 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define KI_FOR_FOLLOWLINE 0.00
 #define KD_FOR_FOLLOWLINE 0.001
 
-#define KP_FOR_FOLLOW_WALL 0.005
-#define KI_FOR_FOLLOW_WALL 0
-#define KD_FOR_FOLLOW_WALL 0
+#define KP_FOR_FOLLOWWALL 0.005
+#define KI_FOR_FOLLOWWALL 0
+#define KD_FOR_FOLLOWWALL 0
 #define NUMBER_OF_IRSENSORS 8
 #define CRITICAL_IR_VALUE 0.5
 #define OBSTACLE_DIST 20
@@ -143,12 +143,14 @@ void update_motcon(motiontype *p);
 /********************************************
 * Mission control
 */
-int fwd(double dist, double speed,int time);
+int fwd(double dist, double speed, int condition, int time);
 int turn(double angle, double speed,int time);
 int turnr(double radius, double angle, double speed, int time);
-int followLineCenter(double dist, double speed, int time);
+int followLineCenter(double dist, double speed, int condition, int time)
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
-int follow_wall(int side, double dist, double speed, int time);
+int follow_wall(int side, double dist, double speed, int condition, int time);
+int followRightLine(double dist, double speed, int time);
+int followLeftLine(double dist, double speed, int time);
 
 
 void getTransformedIRData(double* output); // Calibfunction - Calibrates in relation to black_mean.
@@ -178,9 +180,7 @@ double Kb_IR_sim[5] = {73.5153115510393, 73.5153115510393, 73.5153115510393, 73.
 double rightMostPosSlope();
 char stopLine();
 char detectLine();
-int followRightLine(double dist, double speed, int time);
 
-int followLeftLine(double dist, double speed, int time);
 
 typedef struct{
   int state,oldstate;
@@ -1023,19 +1023,6 @@ switch (p->curcmd){
 		}
 	break;
 	}
-
-	//drives forward until a wall is detected at a distance of 20 cm
-	case mot_blackLine_until_walldetection:
-		if(getDistIR[0]>20 || getDistIR[1]>20 || getDistIR[2]>20){
-			p->motorspeed_r = p->speedcmd;
-			p->motorspeed_l = p->speedcmd;
-		}
-		else{
-			p->motorspeed_l = 0;
-			p->motorspeed_r = 0;
-			p->finished = 1;
-		}
-	break;
 }
 
 int fwd(double dist, double speed, int condition,int time){        // Cond: 0 for dist, 1 for wall detection
