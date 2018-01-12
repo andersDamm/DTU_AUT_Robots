@@ -323,10 +323,12 @@ if (lmssrv.connected){
   mission.oldstate=-1;
 
 if(IS_SIMULATION){
+    printf("Shit I'm caught in a simulation!\n");
 	for(n=0;n<5;n++){
 		Ka_IR[n] = Ka_IR_sim[n];
 		Kb_IR[n] = Kb_IR_sim[n];
 	}
+    n=0;
 }
   /*
    * Run loop
@@ -360,6 +362,7 @@ switch (mission.state) {
 		n=0; dist=0.5;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
             mission.state=ms_PushNDrive_SIM;
+            printf("Beginning the box-moving in the sim!\n");
         } else{
             mission.state= ms_PushNDrive_RW;
         }
@@ -506,7 +509,7 @@ switch (mission.state) {
     break;
 
   case ms_PushNDrive_SIM:        // Push box and gate
-		printf("n: %d ", n);
+		//printf("n: %d \n", n);
 		if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
 	  		if(followLineCenter(4, 0.3, 2, mission.time)){
 				mission.time=-1; n=1;
@@ -573,7 +576,7 @@ switch (mission.state) {
   	break;
 
   case ms_PushNDrive_RW:
-	printf("n: %d ", n);
+	//printf("n: %d \n", n);
 	if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
 	  if(followLineCenter(4,0.3, 2, mission.time)){
 		mission.time=-1; n=1;
@@ -752,7 +755,6 @@ void update_motcon(motiontype *p){
     double delta_l, delta_r;
 	if (p->cmd !=0){
 		p->finished=0;
-		p->stop_condition=0;
 		p->error_sum=0;
 		p->error_old=0;
 		switch (p->cmd){
@@ -790,10 +792,11 @@ void update_motcon(motiontype *p){
                 p->startpos=(p->left_pos+p->right_pos)/2;
                 p->curcmd=mot_followLineCenter;
             break;
-     case mot_followWhiteLine:
-        p->startpos=(p->left_pos+p->right_pos)/2;
-        p->curcmd=mot_followWhiteLine;
-     break;
+
+            case mot_followWhiteLine:
+                p->startpos=(p->left_pos+p->right_pos)/2;
+                p->curcmd=mot_followWhiteLine;
+            break;
 
             case mot_follow_wall_left:
                 p->curcmd=mot_follow_wall_left;
@@ -1197,6 +1200,7 @@ int followLineCenter(double dist, double speed,int condition, int time){   // li
    mot.speedcmd = speed;
    mot.dist = dist;
    mot.stop_condition = condition;
+   printf("flc stopcon: %d", mot.stop_condition);
    return 0;
  }
  else return mot.finished;
