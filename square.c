@@ -88,7 +88,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define OBSTACLE_DIST 20
 #define CRITICAL_BLACK_VALUE 0.8
 #define CRITICAL_FLOOR_VALUE 0.2
-#define IS_SIMULATION 1 //1=simulation, 0=real world
+#define IS_SIMULATION 0 //1=simulation, 0=real world
 #define CRIT_NR_BLACK_LINE 6
 #define DONT_CARE 0
 
@@ -306,7 +306,7 @@ serverconnect(&lmssrv);
 if (lmssrv.connected){
 	xmllaser=xml_in_init(4096,32);
 	printf(" laserserver xml initialized \n");
-	len=sprintf(buf,"push  t=0.2 cmd='mrcobst width=0.4'\n");
+	len=sprintf(buf,"scanpush cmd='zoneobst'\n");
 	send(lmssrv.sockfd,buf,len,0);
 }
 
@@ -367,12 +367,17 @@ if(IS_SIMULATION){
 sm_update(&mission);
 switch (mission.state) {
 	case ms_init:
-		n=0; dist=0.5;angle= -90.0/180*M_PI;
+		n=-1; dist=0.5;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
             mission.state=ms_last_box;
             printf("Beginning the box-moving in the sim!\n");
         } else{
+<<<<<<< HEAD
             mission.state= ms_last_box;
+=======
+            mission.state= ms_PushNDrive_RW;
+            printf("Beginning the box-moving in the RW!\n");
+>>>>>>> master
         }
 	break;
 
@@ -585,20 +590,27 @@ switch (mission.state) {
 
   case ms_PushNDrive_RW:
 	//printf("n: %d \n", n);
-	if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
-	  if(followLineCenter(4,0.3, 2, mission.time)){
+	if(n==-1){
+	    printf("IR dist: %f\tLaserpar: %f\n", minDistFrontIR(), laserpar[4]);
+	    if(followLineCenter(0.2,0.2, 1, mission.time)){
+		mission.time=-1; n=0;
+	  }
+	}
+	else if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front, 3 for obj with laser
+        printf("IR dist: %f\tLaserpar: %f\n", minDistFrontIR(), laserpar[4]);
+	  if(followLineCenter(4,0.2, 3, mission.time)){
 		mission.time=-1; n=1;
 	  }
 	}else if(n==1){//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
-	  if(fwd(0.50,0.3,0,mission.time)){
+	  if(fwd(0.55,0.2,0,mission.time)){
 		mission.time=-1; n=2;
 	  }
 	}else if(n==2){
-	  if(fwd(0.85,-0.3,0,mission.time)){
+	  if(fwd(0.85,-0.2,0,mission.time)){
 		mission.time=-1; n = 3;
 	  }
 	}else if(n==3){
-	  if(turn(-90.0/180*M_PI,0.3,mission.time)){
+	  if(turn(-90.0/180*M_PI,0.15,mission.time)){
 		mission.time=-1; n = 4;
 	  }
 	}else if(n==4){                                      // Drive till line found
@@ -606,7 +618,7 @@ switch (mission.state) {
 		mission.time=-1; n = 5;
 	  }
 	}else if(n==5){
-	  if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
+	  if(turnr(0.2,90.0/180*M_PI,0.1,mission.time)){
 		mission.time=-1; n = 6;
 	  }
 	}else if(n==6){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
@@ -615,32 +627,32 @@ switch (mission.state) {
 	  }
 	}
 	 else if(n==7){
-	  if(fwd(0.1,0.2,0,mission.time)){
+	  if(fwd(0.15,0.2,0,mission.time)){
 	mission.time = -1; n = 8;
 	  }
 	}
 	else if(n==8){
-	  if(turn(90.0/180*M_PI,0.3,mission.time)){
+	  if(turn(90.0/180*M_PI,0.1,mission.time)){
 	mission.time = -1; n = 9;
 	  }
 	}
 	else if(n==9){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
-	  if(followLineCenter(2,0.3,0,mission.time)){
+	  if(followLineCenter(2,0.1,0,mission.time)){
 		mission.time=-1; n = 11;
 	  }
 	}
 	 else if(n==11){//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
-	  if(fwd(0.20,0.3,0,mission.time)){
+	  if(fwd(0.20,0.2,0,mission.time)){
 		mission.time=-1; n = 12;
 	  }
 	 }
 	 else if(n==12){
-	  if(followRightLine(0.8,0.3,mission.time)){
+	  if(followRightLine(0.4,0.2,mission.time)){
 		mission.time=-1; n = 13;
 	  }
 	 }
 	 else if(n==13){// Cond: 0 for stopline, 1 for dist, 2 for object in front
-	 if(followLineCenter(5,0.4,0,mission.time)){
+	 if(followLineCenter(5,0.2,0,mission.time)){
 	   mission.time =-1; n= 14;
 	}
       } 
@@ -1006,7 +1018,7 @@ void update_motcon(motiontype *p){
 		break;
 
 		case mot_followLineCenter:
-			//stop_condition: 0=stop by stop line detection, 1=stop by defined distance p->dist, 2=stop by IR obstacle detection
+			//stop_condition: 0=stop by stop line detection, 1=stop by defined distance p->dist, 2=stop by IR obstacle detection, 3=stop by LASER
 			p->error_old = p->error_current;
 			p->error_current = centerOfGravity(0)-3.5;
 			p->error_sum += p->error_current;
@@ -1019,10 +1031,19 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
+<<<<<<< HEAD
 			else if(p->stop_condition==2 && minDistFrontIR() > 1){
+=======
+			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIST){
+                printf("Dist: %f\n", minDistFrontIR());
+>>>>>>> master
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
+            else if(p->stop_condition==3 && laserpar[4] > 0.2){
+                p->motorspeed_l = p->speedcmd - pid;
+				p->motorspeed_r = p->speedcmd + pid;
+            } 
 			else {
 				p->motorspeed_l = 0;
 				p->motorspeed_r = 0;
@@ -1216,7 +1237,7 @@ int followLineCenter(double dist, double speed,int condition, int time){   // li
    mot.speedcmd = speed;
    mot.dist = dist;
    mot.stop_condition = condition;
-   printf("flc stopcon: %d", mot.stop_condition);
+   printf("flc stopcon: %d\n", mot.stop_condition);
    return 0;
  }
  else return mot.finished;
