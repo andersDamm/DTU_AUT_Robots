@@ -88,7 +88,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define OBSTACLE_DIST 20
 #define CRITICAL_BLACK_VALUE 0.8
 #define CRITICAL_FLOOR_VALUE 0.2
-#define IS_SIMULATION 0 //1=simulation, 0=real world
+#define IS_SIMULATION 1 //1=simulation, 0=real world
 #define CRIT_NR_BLACK_LINE 6
 #define DONT_CARE 0
 
@@ -357,12 +357,13 @@ if(IS_SIMULATION){
   / mission statemachine
   */
 sm_update(&mission);
+
 switch (mission.state) {
 	case ms_init:
-		n=-1; dist=0.5;angle= -90.0/180*M_PI;
+		n=0; dist=0.5;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
-            mission.state=ms_PushNDrive_SIM;
-            printf("Beginning the box-moving in the sim!\n");
+            mission.state=ms_wall_gate;
+            printf("Beginning the wall_gate in the sim!\n");
         } else{
             mission.state= ms_PushNDrive_RW;
             printf("Beginning the box-moving in the RW!\n");
@@ -644,32 +645,38 @@ switch (mission.state) {
 
     case ms_wall_gate:
         if(n==0){ //Turn the same way as the line
-            if(turnr(0.1,90.0/180*M_PI,0.3,mission.time)){
+            printf("Turn\n");
+            if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
                 mission.time =-1; n=1;
             }
-        } else if(n==1){  //Follow the line through the first gate, 0=distance
-            if(followLineCenter(0.5, 0.2, 0, mission.time)){  // TODO: Update distance to match RW or SIM
+        } else if(n==1){  //Follow the line through the first gate, 1=distance
+        printf("Followline\n");
+            if(followLineCenter(0.4, 0.2, 1, mission.time)){
                 mission.time =-1; n=2;
             }
         } else if(n==2){  // Turn to wall
-            if(turnr(0.2,100/180*M_PI,0.3,mission.time)){
+        printf("Turn\n");
+            if(turnr(0.2,100.0/180*M_PI,0.3,mission.time)){
                 mission.time =-1; n=3;
             }
-        } else if(n==3){ //Follow wall till inside gate, s=0=left, cond=1
-            if(follow_wall(0, 4, 0.1, 1, mission.time)){ // Stopcon: 0 for hole in wall, 1 for object on the other side
+        } else if(n==3){ //Follow wall till inside gate, s=0=left, cond=1  //TODO: It nearly skips this
+        printf("Follow wall\n");
+            if(follow_wall(2, 20, 0.1, 1, mission.time)){ // Stopcon: 0 for hole in wall, 1 for object on the other side
                 mission.time =-1; n=4;
             } 
         } else if(n==4){
+        printf("Followline\n");
             if(followLineCenter(4, 0.2, 0, mission.time)){  // Cond: 0 for stopline, 1 for dist, 2 for object in front
                 mission.time =-1; n=5;
             }
         } else if(n==5){
+        printf("Turn\n");
             if(turnr(0.2,90/180*M_PI,0.3,mission.time)){
                 mission.time =-1; n=6;
             }
         } else if(n==6){
             if(followLineCenter(4, 0.2, 0, mission.time)){
-                mission.time =-1; n=7
+                mission.time =-1; n=7;
             }
         } else if(n==7){
             if(turnr(0.2,90/180*M_PI,0.3,mission.time)){
@@ -677,7 +684,7 @@ switch (mission.state) {
             }
         } else if(n==8){
             if(followLineCenter(4, 0.2, 0, mission.time)){
-                mission.time =-1; n=7
+                mission.time =-1; n=7;
             }
         } else if(n>8){
             mission.state=ms_end;
