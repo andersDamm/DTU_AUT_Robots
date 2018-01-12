@@ -138,7 +138,7 @@ typedef struct{//input
 enum {
 	mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,mot_followRightLine,mot_followLeftLine, 
 	mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse, mot_detect_line, 
-	mot_followWhileLine
+	mot_followWhiteLine
 };
 
 void update_motcon(motiontype *p);
@@ -206,7 +206,7 @@ motiontype mot;
 
 enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_followRightLine,
 ms_followLeftLine,ms_follow_wall,ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end,
-ms_wall_gate,ms_last_box,ms_whiteLine};
+ms_wall_gate,ms_last_box,ms_followWhiteLine,ms_distanceToBox};
 
 int main()
 {
@@ -393,12 +393,8 @@ switch (mission.state) {
 		if (followLineCenter(dist,0.1,0,mission.time)) mission.state = ms_end; 
     break;
 
-  case ms_followWhiteLine:
-    if(followWhiteLine(2.5,0.3,mission.time)) mission.state = ms_end;
-    break;
-
     case ms_follow_wall: //Side = 0 = left   Side = 1 = right   Side = 2 = middle
-        if(follow_wall(2,20,-0.3,mission.time)) mission.state = ms_end;
+        if(follow_wall(2,20,-0.3,0,mission.time)) mission.state = ms_end;
     break;
     case ms_followRightLine:
         if (followRightLine(2,0.3,mission.time)) mission.state = ms_followLineCenter;
@@ -437,23 +433,23 @@ switch (mission.state) {
       mission.time=-1; n=3;
       }
     }
-    else if(n==3){
-      if(fwd(0,0.3,mission.time)){
+    else if(n==3){	//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+      if(fwd(0,0.3,2,mission.time)){
 	mission.time=-1;n=4;
       }
     }
     else if(n==4){
-      if(fwd(0.3,0.4,mission.time)){
+      if(fwd(0.3,0.4,0,mission.time)){
 	mission.time=-1;n=5;
       }
     }
     else if(n==5){
-      if(fwd(0,0.4,mission.time)){
+      if(fwd(0,0.4,2,mission.time)){
 	mission.time=-1; n= 6;
       }
     }
     else if(n==6){
-      if(fwd(0.2,0.4,mission.time)){
+      if(fwd(0.2,0.4,0,mission.time)){
 	mission.time=-1; n= 7;
       }
     }
@@ -468,14 +464,14 @@ switch (mission.state) {
     }
     break;
 
-  case ms_whiteLine:  // White line task
-    if(n==0){
-      if(followLineCenter(4,0.3, mission.time)){
+  case ms_followWhiteLine:  // White line task
+    if(n==0){	 // Cond: 0 for stopline, 1 for dist, 2 for object in front
+      if(followLineCenter(4,0.3,0,mission.time)){
         mission.time=-1; n=1;
       }
     }
-    else if(n==1){
-      if(fwd(0.5,0.3,mission.time)){
+    else if(n==1){	//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+      if(fwd(0.5,0.3,0,mission.time)){
 	mission.time = -1; n=2;
       }
     }
@@ -490,7 +486,7 @@ switch (mission.state) {
       }
     }
     else if(n==4){
-      if(fwd(0.5,0.3,mission.time)){
+      if(fwd(0.5,0.3,0,mission.time)){
 	mission.time=-1; n=5;
       }
     }
@@ -500,7 +496,7 @@ switch (mission.state) {
       }
     }
     else if(n==6){
-      if(fwd(0.5,0.3,mission.time)){
+      if(fwd(0.5,0.3,0,mission.time)){
 	mission.time=-1; n=7;
       }
      }
