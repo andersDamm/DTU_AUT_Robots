@@ -83,7 +83,8 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define CRITICAL_IR_VALUE 0.5
 #define OBSTACLE_DIST 20
 #define CRITICAL_BLACK_VALUE 0.8
-#define IS_SIMULATION 1 //1=simulation, 0=real world
+#define CRITICAL_FLOOR_VALUE 0.2
+#define IS_SIMULATION 0 //0=simulation, 1=real world
 #define CRIT_NR_BLACK_LINE 6
 
 
@@ -128,7 +129,7 @@ typedef struct{//input
 
 }motiontype;
 
-enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,mot_followRightLine,mot_followLeftLine, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse, mot_detect_line};
+enum {mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,mot_followRightLine,mot_followLeftLine, mot_follow_wall_left, mot_follow_wall_right, mot_follow_wall_between, mot_reverse, mot_detect_line, mot_followWhiteLine};
 
 void update_motcon(motiontype *p);
 
@@ -139,6 +140,7 @@ int fwd(double dist, double speed,int time);
 int turn(double angle, double speed,int time);
 int turnr(double radius, double angle, double speed, int time);
 int followLineCenter(double dist, double speed, int time);
+int followWhiteLine(double dist, double speed, int time);
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 int follow_wall(int side, double dist, double speed, int time);
 
@@ -148,6 +150,7 @@ void getTransformedIRData(double* output); // Calibfunction - Calibrates in rela
 * Sensor functions and variables
 */
 int minIntensity();             // Minimum intensity function
+int maxIntensity();
 double centerOfGravity(char color);  // Finding the line with centre of gravity algorithm
 
 double leftMostNegSlope();
@@ -169,6 +172,7 @@ double Kb_IR_sim[5] = {73.5153115510393, 73.5153115510393, 73.5153115510393, 73.
 // at which the right most positive slope begins.
 double rightMostPosSlope();
 char stopLine();
+
 char detectLine();
 int followRightLine(double dist, double speed, int time);
 
@@ -190,7 +194,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end};
+enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter, ms_followWhiteLine,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_PushNDrive, ms_whiteLine,ms_end};
 
 int main()
 {
@@ -371,8 +375,12 @@ switch (mission.state) {
         }
     break;
 
-    case ms_followLineCenter:
-        if (followLineCenter(dist,0.1,mission.time)) mission.state = ms_end;
+  case ms_followLineCenter:
+    if (followLineCenter(dist,0.1,mission.time)) mission.state = ms_end;
+  break;
+  
+  case ms_followWhiteLine:
+    if(followWhiteLine(2.5,0.3,mission.time)) mission.state = ms_end;
     break;
 
     case ms_follow_wall: //Side = 0 = left   Side = 1 = right   Side = 2 = middle
@@ -395,7 +403,43 @@ switch (mission.state) {
 }
   break;
   
-  case ms_PushNDrive_SIM:
+  case ms_whiteLine:  // White line task
+    if(n==0){
+      if(followLineCenter(4,0.3, mission.time)){
+        mission.time=-1; n=1;
+      }
+    }
+    else if(n==1){
+      if(fwd(0.5,0.3,mission.time)){
+	mission.time = -1; n=2;
+      }
+    }
+    else if(n==2){
+      if(turn(90.0/180*M_PI, 0.3,mission.time)){
+	mission.time=-1; n=3;
+      }
+    }
+    else if(n==3){
+    if(followWhiteLine(2.5,0.2,mission.time)){
+      mission.time =-1; n=4;
+      }
+    }
+    else if(n==4){
+      if(fwd(0.5,0.3,mission.time)){
+	mission.time=-1; n=5;
+      }
+    }
+    else if(n==5){
+      if(turn(-90.0/180*M_PI, 0.3, mission.time)){
+	mission.time=-1; n=6;
+      }
+    }
+    else if(n== 6){
+      mission.state = ms_end;
+    }
+    break;
+    
+  case ms_PushNDrive:        // Push box and gate
     printf("n: %d ", n);
     if(n==0){
       if(followLineCenter(4,0.3, mission.time)){
@@ -414,7 +458,7 @@ switch (mission.state) {
         mission.time=-1; n = 4;
       }
     }else if(n==4){                                      // Drive till line found
-      if(fwd(0,0.2,mission.time)){
+      if(fwd(0,0.2,mission.time)){                       // Drive until black line found. 
         mission.time=-1; n = 5;
       }
     }else if(n==5){
@@ -660,6 +704,10 @@ void update_motcon(motiontype *p){
         p->startpos=(p->left_pos+p->right_pos)/2;
         p->curcmd=mot_followLineCenter;
      break;
+     case mot_followWhiteLine:
+        p->startpos=(p->left_pos+p->right_pos)/2;
+        p->curcmd=mot_followWhiteLine;
+     break;
 
      case mot_follow_wall_left:
      p->curcmd=mot_follow_wall_left;
@@ -848,17 +896,30 @@ switch (p->curcmd){
         }
     break;
 
-    case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
-        if(getDistIR(IR_dist)[0] < 70){
-            p->motorspeed_l=p->speedcmd - K_FOLLOW_WALL*(getDistIR(IR_dist)[0] - p->dist);
-            p->motorspeed_r=p->speedcmd + K_FOLLOW_WALL*(getDistIR(IR_dist)[0] - p->dist);
-        }
-        else{
-            p->motorspeed_l = 0;
-            p->motorspeed_r = 0;
-            p->finished = 1;
-        }
+    case mot_followWhiteLine:
+      
+      if(minDistFrontIR() > OBSTACLE_DIST && p->left_pos - p->startpos < p->dist){
+	    p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(maxIntensity() - 3.5);
+            p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(maxIntensity() - 3.5);
+      }
+      else {
+        p->motorspeed_l = 0;
+        p->motorspeed_r = 0;
+        p->finished = 1;
+      }
     break;
+    
+  case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
+  if(getDistIR(IR_dist)[0] < 70){
+    p->motorspeed_l=p->speedcmd - K_FOLLOW_WALL*(getDistIR(IR_dist)[0] - p->dist);
+    p->motorspeed_r=p->speedcmd + K_FOLLOW_WALL*(getDistIR(IR_dist)[0] - p->dist);
+  }
+  else{
+    p->motorspeed_l = 0;
+    p->motorspeed_r = 0;
+    p->finished = 1;
+  }
+  break;
 
     case mot_followRightLine:
         if (p->right_pos - p->startpos < p->dist && !(stopLine())) {
@@ -967,6 +1028,15 @@ int followLineCenter(double dist, double speed, int time){   // linesensor input
  }
  else return mot.finished;
 }
+int followWhiteLine(double dist, double speed, int time){   // linesensor input???
+  if(time == 0){
+   mot.cmd = mot_followWhiteLine;
+   mot.speedcmd = speed;
+   mot.dist = dist;
+   return 0;
+ }
+ else return mot.finished;
+}
 int follow_wall(int side, double dist, double speed, int time){  //Side = 0 = left   Side = 1 = right   Side = 2 = between!!, min ven
   if(time == 0){
     mot.speedcmd = speed;
@@ -1059,6 +1129,18 @@ int minIntensity(){
   for(i = 1; i < NUMBER_OF_IRSENSORS; i++){
     if(linesensor->data[i]< min){
       min = linesensor->data[i];
+      index = i;
+    }
+  }
+  return index;
+}
+ int maxIntensity(){
+  int i, index = 0;
+  int max;
+  max = (int)linesensor->data[0];
+  for(i = 1; i < NUMBER_OF_IRSENSORS; i++){
+    if(linesensor->data[i]> max){
+      max = linesensor->data[i];
       index = i;
     }
   }
