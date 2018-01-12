@@ -66,6 +66,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 */
 #define WHEEL_DIAMETER   0.067	/* m */
 #define WHEEL_SEPARATION 0.282	/* m 0.252 */
+#define LENGTH_OF_ROBOT 0.26    /*meters from center of wheels to end of front IR sensors */
 #define DELTA_M (M_PI * WHEEL_DIAMETER / 2000)
 #define ROBOTPORT	24902
 #define AJAX 0.5 /* m/s² */
@@ -84,7 +85,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define OBSTACLE_DIST 20
 #define CRITICAL_BLACK_VALUE 0.8
 #define CRITICAL_FLOOR_VALUE 0.2
-#define IS_SIMULATION 0 //0=simulation, 1=real world
+#define IS_SIMULATION 1 //1=simulation, 0=real world
 #define CRIT_NR_BLACK_LINE 6
 
 
@@ -156,9 +157,9 @@ double centerOfGravity(char color);  // Finding the line with centre of gravity 
 double leftMostNegSlope();
 double leftMostPosSlope();
 
-// Returns a number from 0 to 7, which indicates the position 
+// Returns a number from 0 to 7, which indicates the position
 // at which the right most negative slope begins.
-double rightMostNegSlope();	
+double rightMostNegSlope();
 double minDistFrontIR();         // Finds the shortest distance to an object in front, measured by the IR sensor, in cm
 double* getDistIR(double* dist);             // Returns the distance all IR's measure, in an array[5], measured in cm.
 
@@ -167,8 +168,8 @@ double Kb_IR[5] = {93.590281110006, 93.590281110006, 94.007320920384, 92.7448747
 double Ka_IR_sim[5] = {1634.64672091309,1634.64672091309, 1634.64672091309,1634.64672091309,1634.64672091309};
 double Kb_IR_sim[5] = {73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393, 73.5153115510393};
 
-									      
-// Returns a number from 0 to 7, which indicates the position 
+
+// Returns a number from 0 to 7, which indicates the position
 // at which the right most positive slope begins.
 double rightMostPosSlope();
 char stopLine();
@@ -194,7 +195,7 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter, ms_followWhiteLine,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_PushNDrive, ms_whiteLine,ms_end};
+enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter, ms_followWhiteLine,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_distanceToBox,ms_PushNDrive_SIM, ms_PushNDrive_RW, ms_whiteLine,ms_end};
 
 int main()
 {
@@ -202,6 +203,9 @@ int main()
   int counter = 0;
   int running,n=0,arg,time=0;
   double dist=0,angle=0;
+  double x,x_ref=0,distance_Box = 0; // Variables used for "distance to box"
+  FILE *distance_f;
+  double IR_dist[5];
 
   /* Establish connection to robot sensors and actuators.
   */
@@ -337,6 +341,7 @@ if(IS_SIMULATION){
     update_odo(&odo);
 
 
+
   /****************************************
   / mission statemachine
   */
@@ -344,11 +349,7 @@ sm_update(&mission);
 switch (mission.state) {
     case ms_init:
         n=0; dist=0.5;angle= -90.0/180*M_PI;
-        if(IS_SIMULATION){
-            mission.state=ms_PushNDrive_SIM;
-        } else{
-            mission.state= ms_PushNDrive_RW;
-        }
+        mission.state=ms_distanceToBox;
     break;
 
     case ms_fwd:
@@ -378,7 +379,7 @@ switch (mission.state) {
   case ms_followLineCenter:
     if (followLineCenter(dist,0.1,mission.time)) mission.state = ms_end;
   break;
-  
+
   case ms_followWhiteLine:
     if(followWhiteLine(2.5,0.3,mission.time)) mission.state = ms_end;
     break;
@@ -402,7 +403,58 @@ switch (mission.state) {
   printf("No data logged\n");
 }
   break;
-  
+
+  case ms_distanceToBox:
+    if(n==0){
+      if(followRightLine(1.7,0.3,mission.time)){
+	mission.time=-1; n=1;
+      }
+    }
+    else if(n==1){
+      x=odo.x_pos + getDistIR(IR_dist)[2]+ LENGTH_OF_ROBOT;  // Calibrate odo sim
+      distance_Box = x-x_ref;
+      mission.time=-1; n=2;
+      distance_f = fopen("Distance_to_box","w");
+      fprintf(distance_f,"x-distance is: %f \n",distance_Box);
+      fclose(distance_f);
+	n=2;
+      }
+    else if(n==2){
+      if(turn(90.0/180*M_PI,0.3,mission.time)){
+      mission.time=-1; n=3;
+      }
+    }
+    else if(n==3){
+      if(fwd(0,0.3,mission.time)){
+	mission.time=-1;n=4;
+      }
+    }
+    else if(n==4){
+      if(fwd(0.3,0.4,mission.time)){
+	mission.time=-1;n=5;
+      }
+    }
+    else if(n==5){
+      if(fwd(0,0.4,mission.time)){
+	mission.time=-1; n= 6;
+      }
+    }
+    else if(n==6){
+      if(fwd(0.2,0.4,mission.time)){
+	mission.time=-1; n= 7;
+      }
+    }
+    else if(n==7){
+      if(turn(-90.0/180*M_PI,0.3,mission.time)){
+	mission.time =-1; n=8;
+      }
+    }
+    else if(n==8){
+      n=0; mission.time=-1;
+      mission.state=ms_PushNDrive_SIM;
+    }
+    break;
+
   case ms_whiteLine:  // White line task
     if(n==0){
       if(followLineCenter(4,0.3, mission.time)){
@@ -434,12 +486,17 @@ switch (mission.state) {
 	mission.time=-1; n=6;
       }
     }
-    else if(n== 6){
+    else if(n==6){
+      if(fwd(0.5,0.3,mission.time)){
+	mission.time=-1; n=7;
+      }
+     }
+    else if(n== 7){
       mission.state = ms_end;
     }
     break;
-    
-  case ms_PushNDrive:        // Push box and gate
+
+  case ms_PushNDrive_SIM:        // Push box and gate
     printf("n: %d ", n);
     if(n==0){
       if(followLineCenter(4,0.3, mission.time)){
@@ -450,7 +507,7 @@ switch (mission.state) {
         mission.time=-1; n=2;
       }
     }else if(n==2){
-      if(fwd(0.85,-0.3,mission.time)){
+      if(fwd(0.90,-0.3,mission.time)){
         mission.time=-1; n = 3;
       }
     }else if(n==3){
@@ -458,7 +515,7 @@ switch (mission.state) {
         mission.time=-1; n = 4;
       }
     }else if(n==4){                                      // Drive till line found
-      if(fwd(0,0.2,mission.time)){                       // Drive until black line found. 
+      if(fwd(0,0.2,mission.time)){                       // Drive until black line found.
         mission.time=-1; n = 5;
       }
     }else if(n==5){
@@ -499,7 +556,7 @@ switch (mission.state) {
      if(followLineCenter(5,0.4,mission.time)){
        mission.time =-1; n= 14;
 	}
-      }	
+      }
       else if(n == 14){
 	mission.state=ms_end;
       }
@@ -565,7 +622,7 @@ switch (mission.state) {
      if(followLineCenter(5,0.4,mission.time)){
        mission.time =-1; n= 14;
     }
-      } 
+      }
       else if(n == 14){
     mission.state=ms_end;
       }
@@ -678,7 +735,7 @@ void update_motcon(motiontype *p){
       }
       else if(p->dist == 0){ // Activate move to detecting line
 	p->curcmd = mot_detect_line;
-      } 
+      }
       else{
         p->curcmd=mot_move;
       }
@@ -716,7 +773,7 @@ void update_motcon(motiontype *p){
      case mot_follow_wall_right:
      p->curcmd=mot_follow_wall_right;
      break;
-	    
+
     case mot_followRightLine:
 	p->curcmd=mot_followRightLine;
 	p->startpos=(p->left_pos+p->right_pos)/2;
@@ -783,7 +840,7 @@ switch (p->curcmd){
         p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
       }
     break;
-    
+
     case mot_detect_line:
         if(!(detectLine())){
             p->motorspeed_l=p->speedcmd;
@@ -882,7 +939,7 @@ switch (p->curcmd){
                 p->motorspeed_l = p->speedcmd - pid;
                 p->motorspeed_r = p->speedcmd + pid;
             }
-            else if(minDistFrontIR() <= OBSTACLE_DIST && 0){ //Remove && 0 to enable obst det.
+            else if(minDistFrontIR() <= OBSTACLE_DIST && 1){ //Remove && 0 to enable obst det.
 				printf("Wall detected\n");
                 p->motorspeed_l = 0;
                 p->motorspeed_r = 0;
@@ -897,7 +954,7 @@ switch (p->curcmd){
     break;
 
     case mot_followWhiteLine:
-      
+
       if(minDistFrontIR() > OBSTACLE_DIST && p->left_pos - p->startpos < p->dist){
 	    p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(maxIntensity() - 3.5);
             p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(maxIntensity() - 3.5);
@@ -908,7 +965,7 @@ switch (p->curcmd){
         p->finished = 1;
       }
     break;
-    
+
   case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
   if(getDistIR(IR_dist)[0] < 70){
     p->motorspeed_l=p->speedcmd - K_FOLLOW_WALL*(getDistIR(IR_dist)[0] - p->dist);
@@ -932,7 +989,7 @@ switch (p->curcmd){
             p->finished = 1;
         }
     break;
-            
+
     case mot_follow_wall_right:
         if(getDistIR(IR_dist)[4] < 70){
             p->motorspeed_l=p->speedcmd + K_FOLLOW_WALL*(getDistIR(IR_dist)[4] - p->dist);
@@ -969,7 +1026,7 @@ switch (p->curcmd){
         }
     break;
     //printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_ref, odo.theta);
-	    
+
 	case mot_followLeftLine:
         if (stopLine()==0) {
             p->motorspeed_l = p->speedcmd - KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
@@ -989,6 +1046,7 @@ int fwd(double dist, double speed,int time){
         mot.cmd=mot_move;
         mot.speedcmd=speed;
         mot.dist=dist;
+	odo.theta_ref=odo.theta;
         return 0;
     }
     else
@@ -1207,7 +1265,7 @@ double rightMostNegSlope() {
 }
 
 double rightMostPosSlope(){
-	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins. 
+	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins.
     int i;
     double input[NUMBER_OF_IRSENSORS], a;
     getTransformedIRData(input);
@@ -1235,7 +1293,7 @@ double leftMostNegSlope() {
 	return -1;
 }
 double leftMostPosSlope(){
-	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins. 
+	// Returns a number from 0 to 7, which indicates the position at which the right most negative slope begins.
     int i;
     double input[NUMBER_OF_IRSENSORS], a;
     getTransformedIRData(input);
@@ -1277,6 +1335,3 @@ char detectLine(){
     printf("Stopline detected!,%d\n",count);
     return count>2 ? 1 : 0;
 }
-
-
-
