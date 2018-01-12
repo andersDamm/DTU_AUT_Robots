@@ -578,76 +578,69 @@ switch (mission.state) {
 
   case ms_PushNDrive_RW:
 	//printf("n: %d \n", n);
-	if(n==-1){
+	if(n==0){
 	    printf("IR dist: %f\tLaserpar: %f\n", minDistFrontIR(), laserpar[4]);
 	    if(followLineCenter(0.2,0.2, 1, mission.time)){
-		mission.time=-1; n=0;
-	  }
-	}
-	else if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front, 3 for obj with laser
-        printf("IR dist: %f\tLaserpar: %f\n", minDistFrontIR(), laserpar[4]);
-	  if(followLineCenter(4,0.2, 3, mission.time)){
 		mission.time=-1; n=1;
 	  }
-	}else if(n==1){//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+	}
+	else if(n==1){ // Cond: 0 for stopline, 1 for dist, 2 for object in front, 3 for obj with laser
+        //printf("IR dist: %f\tLaserpar: %f\n", minDistFrontIR(), laserpar[4]);
+        if(followLineCenter(4,0.2, 3, mission.time)){
+		  mission.time=-1; n=2;
+        }
+	}else if(n==2){//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
 	  if(fwd(0.55,0.2,0,mission.time)){
-		mission.time=-1; n=2;
-	  }
-	}else if(n==2){
-	  if(fwd(0.85,-0.2,0,mission.time)){
-		mission.time=-1; n = 3;
+		mission.time=-1; n=3;
 	  }
 	}else if(n==3){
-	  if(turn(-90.0/180*M_PI,0.15,mission.time)){
+	  if(fwd(0.85,-0.2,0,mission.time)){
 		mission.time=-1; n = 4;
 	  }
-	}else if(n==4){                                      // Drive till line found
-	  if(fwd(0,0.2,2,mission.time)){
+	}else if(n==4){
+	  if(turn(-90.0/180*M_PI,0.15,mission.time)){
 		mission.time=-1; n = 5;
 	  }
-	}else if(n==5){
-	  if(turnr(0.2,90.0/180*M_PI,0.1,mission.time)){
+	}else if(n==5){                                      // Drive till line found
+	  if(fwd(0,0.2,2,mission.time)){
 		mission.time=-1; n = 6;
 	  }
-	}else if(n==6){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
-	  if(followLineCenter(1,0.2,0,mission.time)){
+	}else if(n==6){
+	  if(turnr(0.2,90.0/180*M_PI,0.1,mission.time)){
 		mission.time=-1; n = 7;
 	  }
-	}
-	 else if(n==7){
-	  if(fwd(0.15,0.2,0,mission.time)){
-	mission.time = -1; n = 8;
+	}else if(n==7){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
+	  if(followLineCenter(1,0.2,0,mission.time)){
+		mission.time=-1; n = 8;
 	  }
-	}
-	else if(n==8){
-	  if(turn(90.0/180*M_PI,0.1,mission.time)){
+	}else if(n==8){
+	  if(fwd(0.15,0.2,0,mission.time)){
 	mission.time = -1; n = 9;
 	  }
-	}
-	else if(n==9){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
+	}else if(n==9){
+	  if(turn(90.0/180*M_PI,0.1,mission.time)){
+	mission.time = -1; n = 10;
+	  }
+	}else if(n==10){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
 	  if(followLineCenter(2,0.1,0,mission.time)){
 		mission.time=-1; n = 11;
 	  }
-	}
-	 else if(n==11){//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+	}else if(n==11){//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
 	  if(fwd(0.20,0.2,0,mission.time)){
 		mission.time=-1; n = 12;
 	  }
-	 }
-	 else if(n==12){
+	}else if(n==12){
 	  if(followRightLine(0.4,0.2,mission.time)){
 		mission.time=-1; n = 13;
 	  }
-	 }
-	 else if(n==13){// Cond: 0 for stopline, 1 for dist, 2 for object in front
-	 if(followLineCenter(5,0.2,0,mission.time)){
-	   mission.time =-1; n= 14;
+	}else if(n==13){// Cond: 0 for stopline, 1 for dist, 2 for object in front
+	   if(followLineCenter(5,0.2,0,mission.time)){
+	       mission.time =-1; n= 14;
+	   }
+    }else if(n == 14){
+	   mission.state=ms_end;
 	}
-      } 
-	  else if(n == 14){
-	mission.state=ms_end;
-	  }
-  break;
+    break;
 
   case ms_last_box:
   	if(n==0){	//follow black line until walldetection 2
