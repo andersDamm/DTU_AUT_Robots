@@ -88,7 +88,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define OBSTACLE_DIST 20
 #define CRITICAL_BLACK_VALUE 0.8
 #define CRITICAL_FLOOR_VALUE 0.2
-#define IS_SIMULATION 0 //1=simulation, 0=real world
+#define IS_SIMULATION 1 //1=simulation, 0=real world
 #define CRIT_NR_BLACK_LINE 6
 #define DONT_CARE 0
 
@@ -338,6 +338,9 @@ if(IS_SIMULATION){
 	}
     n=0;
 }
+else{
+	printf("REAL WORLD!!!!!!!!!!\n");
+}
   /*
    * Run loop
   */
@@ -367,17 +370,12 @@ if(IS_SIMULATION){
 sm_update(&mission);
 switch (mission.state) {
 	case ms_init:
-		n=-1; dist=0.5;angle= -90.0/180*M_PI;
+		n=0; dist=0.5;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
             mission.state=ms_last_box;
             printf("Beginning the box-moving in the sim!\n");
         } else{
-<<<<<<< HEAD
-            mission.state= ms_last_box;
-=======
-            mission.state= ms_PushNDrive_RW;
-            printf("Beginning the box-moving in the RW!\n");
->>>>>>> master
+            mission.state=ms_last_box;
         }
 	break;
 
@@ -471,7 +469,7 @@ switch (mission.state) {
     }
     else if(n==7){
       if(turn(-90.0/180*M_PI,0.3,mission.time)){
-	mission.time =-1; n=8;
+	  mission.time =-1; n=8;
       }
     }
     else if(n==8){
@@ -661,34 +659,34 @@ switch (mission.state) {
 	  }
   break;
 
-  case ms_last_box:
+  case ms_last_box:	
   	if(n==0){	//follow black line until walldetection 2
-  		if(followLineCenter(1, 0.3,2, mission.time)){
+  		if(followLineCenter(0.2, 0.3,2, mission.time)){
   			mission.time = -1;
   			n=1;
+			printf("n = %d\n",n);
   		}
-		printf("n = %d\n", n);
   	}			//turn 90 degrees CCW
   	else if(n==1){
-		if(turn(90/180*M_PI, 0.1,mission.time)){
+		if(turn(-90/180*M_PI, 0.3,mission.time)){
 			mission.time = -1;
-			n = 2;
+			n=2;
+			printf("n = %d\n",n);
 		}
-		printf("n = %d\n", n);
 	}
 	else if(n==2){
 		if(follow_wall(1, 0.2, 0.3, 0, mission.time)){
 			mission.time = -1;
 			n = 3;
+			printf("n = %d\n",n);
 		}
-		printf("n = %d\n", n);
 	}
 	else if(n==3){
 		if(fwd(0.2, 0.3, 0, mission.time)){
 			mission.time = -1;
 			n = 4;
+			printf("n = %d\n",n);
 		}
-		printf("n = %d\n", n);
 	}
   	
 }
@@ -1031,12 +1029,7 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
-<<<<<<< HEAD
-			else if(p->stop_condition==2 && minDistFrontIR() > 1){
-=======
-			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIST){
-                printf("Dist: %f\n", minDistFrontIR());
->>>>>>> master
+			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIST){	//OBSTACLE_DIST
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
