@@ -750,6 +750,18 @@ switch (p->curcmd){
 		p->motorspeed_r=0;
 	break;
 
+	case mot_fwd:
+		if(p->stop_condition==0 && !detectLine() ){
+			p->motorspeed_l=p->speedcmd;
+			p->motorspeed_r=p->speedcmd;
+		}
+		else{
+			p->finished=1;
+			p->motorspeed_l=0;
+			p->motorspeed_r=0;
+		}
+	break;
+
 	//stop_condition: 0=stop by dist, 1=stop by wall detection
 	case mot_move:
 		d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
@@ -1073,7 +1085,7 @@ int turnr(double radius, double angle, double speed, int time){
    return mot.finished;
 
 }
-int followLineCenter(double dist, double speed, int time){   // linesensor input???
+int followLineCenter(double dist, double speed,int condition, int time){   // linesensor input???
   if(time == 0){
    mot.cmd = mot_followLineCenter;
    mot.speedcmd = speed;
