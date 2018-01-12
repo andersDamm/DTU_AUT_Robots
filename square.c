@@ -394,49 +394,49 @@ switch (mission.state) {
 		if (followLeftLine(2,0.3,mission.time)) mission.state = ms_end;
 	break;
 
-  case ms_end:
-	mot.cmd=mot_stop;
-	running=0;
-	// Output the data
-	if(log_data_to_file(poseTimeLog_a, counter)){
-  printf("No data logged\n");
-}
-  break;
+    case ms_end:
+        mot.cmd=mot_stop;
+        running=0;
+        // Output the data
+        if(log_data_to_file(poseTimeLog_a, counter)){
+            printf("No data logged\n");
+        }
+    break;
 
-  case ms_wall_gate:
-    if(n==0){
-        if(turn(90.0/180*M_PI),0.2,mission.time){
-            mission.time=-1; n=1;
+    case ms_wall_gate:
+        if(n==0){
+            if(turn(90.0/180*M_PI),0.2,mission.time){
+                mission.time=-1; n=1;
+            }
         }
-    }
-    else if(n==1){  //Side = 0 = left   Side = 1 = right   Side = 2 = middle  // Cond: 0 for hole in wall, 1 for object on opposite side
-        if(follow_wall(0, 20, 0.3, 1, mission.time)){
-            mission.time=-1; n=2;
+        else if(n==1){  //Side = 0 = left   Side = 1 = right   Side = 2 = middle  // Cond: 0 for hole in wall, 1 for object on opposite side
+            if(follow_wall(0, 20, 0.3, 1, mission.time)){
+                mission.time=-1; n=5;
+            }
         }
-    }
-    else if(n==2){
-        if(){
-            mission.time=-1; n=3;
+        else if(n==2){
+            if(){
+                mission.time=-1; n=3;
+            }
         }
-    }
-    else if(n==3){
-        if(){
-            mission.time=-1; n=4;
+        else if(n==3){
+            if(){
+                mission.time=-1; n=4;
+            }
         }
-    }
-    else if(n==4){
-        if(){
-            mission.time=-1; n=5;
+        else if(n==4){
+            if(){
+                mission.time=-1; n=5;
+            }
         }
-    }
-    else if(n<20){
-        if(){
-            n=0;mission.state=ms_end;
+        else if(n<20){
+            if(){
+                n=0;mission.state=ms_end;
+            }
         }
-    }
-  break;
+    break;
   
-  case ms_PushNDrive_SIM:
+    case ms_PushNDrive_SIM:
 	printf("n: %d ", n);
 	if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
 	  if(followLineCenter(4, 0.3, 2, mission.time)){
@@ -577,13 +577,13 @@ switch (mission.state) {
   		}
   	}			//turn 90 degrees CCW
   	else if(n==1){
-  		if(turn(-90*180/M_PI, double speed,int time)){
+  		/*if(turn(-90*180/M_PI, double speed,int time)){
   			mission.time = -1;
   			n=2;
-  		}
+  		}*/ 
   	}
   	else if(n==2){	//follow right wall until no wall detected   //Side = 0 = left   Side = 1 = right   Side = 2 = middle  // Cond: 0 for hole in wall, 1 for object on opposite side
-  		if(follow_wall(1, double dist, double speed, 0, mission.time))
+  		//if(follow_wall(1, double dist, double speed, 0, mission.time))
   	}
 }
 
