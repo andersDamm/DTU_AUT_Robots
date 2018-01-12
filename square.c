@@ -145,7 +145,7 @@ void update_motcon(motiontype *p);
 int fwd(double dist, double speed, int condition, int time);
 int turn(double angle, double speed,int time);
 int turnr(double radius, double angle, double speed, int time);
-int followLineCenter(double dist, double speed, int condition, int time)
+int followLineCenter(double dist, double speed, int condition, int time);
 double center_of_gravity(int* input, int size, char color);  // Finding the line with centre of gravity algorithm
 int follow_wall(int side, double dist, double speed, int condition, int time);
 int followRightLine(double dist, double speed, int time);
@@ -434,71 +434,71 @@ switch (mission.state) {
     break;
   
     case ms_PushNDrive_SIM:
-	printf("n: %d ", n);
-	if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
-	  if(followLineCenter(4, 0.3, 2, mission.time)){
-		mission.time=-1; n=1;
-	  }
-	}else if(n==1){
-	  if(fwd(0.50,0.3,mission.time)){
-		mission.time=-1; n=2;
-	  }
-	}else if(n==2){
-	  if(fwd(0.85,-0.3,mission.time)){
-		mission.time=-1; n = 3;
-	  }
-	}else if(n==3){
-	  if(turn(-90.0/180*M_PI,0.3,mission.time)){
-		mission.time=-1; n = 4;
-	  }
-	}else if(n==4){                                      // Drive till line found
-	  if(fwd(0,0.2,mission.time)){
-		mission.time=-1; n = 5;
-	  }
-	}else if(n==5){
-	  if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
-		mission.time=-1; n = 6;
-	  }
-	}else if(n==6){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
-	  if(followLineCenter(1, 0.2, 0, mission.time)){
-		mission.time=-1; n = 7;
-	  }
-	}
-	 else if(n==7){
-	  if(fwd(0.1,0.2,mission.time)){
-	mission.time = -1; n = 8;
-	  }
-	}
-	else if(n==8){
-	  if(turn(90.0/180*M_PI,0.3,mission.time)){
-	mission.time = -1; n = 9;
-	  }
-	}
-	else if(n==9){  // Cond: 0 for stopline, 1 for dist, 2 for object in front
-	  if(followLineCenter(2,0.3,0,mission.time)){
-		mission.time=-1; n = 11;
-	  }
-	}
-	 else if(n==11){
-	  if(fwd(0.20,0.3,mission.time)){
-		mission.time=-1; n = 12;
-	  }
-	 }
-	 else if(n==12){
-	  if(followRightLine(0.8,0.3,mission.time)){
-		mission.time=-1; n = 13;
-	  }
-	 }
-	 else if(n==13){  // Cond: 0 for stopline, 1 for dist, 2 for object in front
-	 if(followLineCenter(5,0.4,0,mission.time)){
-	   mission.time =-1; n= 14;
-	}
-	  }	
-	  else if(n == 14){
-        n=0;
-        emission.state=ms_end;
-	  }
-  break;
+		printf("n: %d ", n);
+		if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
+	  		if(followLineCenter(4, 0.3, 2, mission.time)){
+				mission.time=-1; n=1;
+	  		}
+		}else if(n==1){
+		  	if(fwd(0.50,0.3,mission.time)){
+				mission.time=-1; n=2;
+		  	}
+		}else if(n==2){
+		  	if(fwd(0.85,-0.3,mission.time)){
+				mission.time=-1; n = 3;
+		  	}
+		}else if(n==3){
+		  	if(turn(-90.0/180*M_PI,0.3,mission.time)){
+				mission.time=-1; n = 4;
+		  	}
+		}else if(n==4){                                      // Drive till line found
+		  	if(fwd(0,0.2,mission.time)){
+				mission.time=-1; n = 5;
+		  	}
+		}else if(n==5){
+		  	if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
+				mission.time=-1; n = 6;
+		  	}
+		}else if(n==6){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
+		  	if(followLineCenter(1, 0.2, 0, mission.time)){
+				mission.time=-1; n = 7;
+		  	}
+		}
+	 	else if(n==7){
+		  	if(fwd(0.1,0.2,mission.time)){
+				mission.time = -1; n = 8;
+		  	}
+		}
+		else if(n==8){
+		  	if(turn(90.0/180*M_PI,0.3,mission.time)){
+				mission.time = -1; n = 9;
+		  	}
+		}
+		else if(n==9){  // Cond: 0 for stopline, 1 for dist, 2 for object in front
+		  	if(followLineCenter(2,0.3,0,mission.time)){
+				mission.time=-1; n = 11;
+		  	}
+		}
+	 	else if(n==11){
+		  	if(fwd(0.20,0.3,mission.time)){
+				mission.time=-1; n = 12;
+		  	}
+	 	}
+	 	else if(n==12){
+		  	if(followRightLine(0.8,0.3,mission.time)){
+				mission.time=-1; n = 13;
+		  	}
+	 	}
+	 	else if(n==13){  // Cond: 0 for stopline, 1 for dist, 2 for object in front
+		 	if(followLineCenter(5,0.4,0,mission.time)){
+		   		mission.time =-1; n= 14;
+			}
+	  	}	
+	  	else if(n == 14){
+		    n=0;
+		    emission.state=ms_end;
+	  	}
+  	break;
 
   case ms_PushNDrive_RW:
 	printf("n: %d ", n);
@@ -674,7 +674,6 @@ void update_motcon(motiontype *p){
 	double d, d_angle,pid;
     double IR_dist[5];
     double delta_l, delta_r;
-    double mot_move_dist,mot_move_dist_diff;
 	if (p->cmd !=0){
 		p->finished=0;
 		p->stop_condition=0;
@@ -738,313 +737,329 @@ void update_motcon(motiontype *p){
             break;
 
             case mot_follow_wall_between:
-                p->curcmd=mot_follow_wall_between;
+            	p->curcmd=mot_follow_wall_between;
             break;
-   }
-   p->cmd=0;
- }
+   		}
+   	p->cmd=0;
+ 	}
 
-switch (p->curcmd){
-	case mot_stop:
-		p->motorspeed_l=0;
-		p->motorspeed_r=0;
-	break;
-
-	case mot_fwd:
-		if(p->stop_condition==0 && !detectLine() ){
-			p->motorspeed_l=p->speedcmd;
-			p->motorspeed_r=p->speedcmd;
-		}
-		else{
-			p->finished=1;
+	switch (p->curcmd){
+		case mot_stop:
 			p->motorspeed_l=0;
 			p->motorspeed_r=0;
-		}
-	break;
+		break;
 
-	//stop_condition: 0=stop by dist, 1=stop by wall detection
-	case mot_move:
-		d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
-		if(p->stop_condition==0){
-			mot_move_dist = p->dist;
-		}
-		else if(p->stop_condition==1){
-			mot_move_dist = minDistFrontIR();
-		}
-		if ((p->right_pos+p->left_pos)/2- p->startpos >= mot_move_dist){
-			p->finished=1;
-			p->motorspeed_l=0;
-			p->motorspeed_r=0;
-  		}
-  		else if((p->right_pos+p->left_pos)/2- p->startpos > mot_move_dist - d){ 	// Deacceleration
-			p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-			p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-	  	}
-	  	else if(p->motorspeed_l<p->speedcmd){                           			// Acceleration
-			p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-			p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-	  	}
-	  	else {
-			p->motorspeed_l=p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-			p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-	  	}
-	break;
+		//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+		case mot_move:
+			d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
+			if(p->stop_condition==0){
+				if ((p->right_pos+p->left_pos)/2- p->startpos >= p->dist){
+					p->finished=1;
+					p->motorspeed_l=0;
+					p->motorspeed_r=0;
+	  			}
+	  			else if((p->right_pos+p->left_pos)/2- p->startpos > p->dist - d){ 	// Deacceleration
+					p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  		}
+		  		else if(p->motorspeed_l<p->speedcmd){                           			// Acceleration
+					p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  		}
+		  		else {
+					p->motorspeed_l=p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  		}
+			}
+			else if(p->stop_condition==1){
+				if ((p->right_pos+p->left_pos)/2- p->startpos >= minDistFrontIR()){
+					p->finished=1;
+					p->motorspeed_l=0;
+					p->motorspeed_r=0;
+	  			}
+	  			else if((p->right_pos+p->left_pos)/2- p->startpos > minDistFrontIR() - d){ 	// Deacceleration
+					p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  		}
+		  		else if(p->motorspeed_l<p->speedcmd){                           			// Acceleration
+					p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  		}
+		  		else {
+					p->motorspeed_l=p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  		}
+			}
+			else if(p->stop_condition==2 && !detectLine() ){
+				p->motorspeed_l=p->speedcmd;
+				p->motorspeed_r=p->speedcmd;
+			}
+			else{
+				p->finished=1;
+				p->motorspeed_l=0;
+				p->motorspeed_r=0;
+			}
+		break;
 
-	case mot_reverse:
-	  d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
+		case mot_reverse:
+			d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
 
-	  if ((p->right_pos+p->left_pos)/2- p->startpos <= -(p->dist)){
-		p->finished=1;
-		p->motorspeed_l=0;
-		p->motorspeed_r=0;
-	  }
-	  else if((p->right_pos+p->left_pos)/2- p->startpos < -(p->dist-d)){ // Deacceleration
-		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-	  }
-	  else if(p->motorspeed_l>p->speedcmd){                           // Acceleration
-		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-	  }
-	  else {
-		p->motorspeed_l=p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-		p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-	  }
-	break;
+		 	if ((p->right_pos+p->left_pos)/2- p->startpos <= -(p->dist)){
+				p->finished=1;
+				p->motorspeed_l=0;
+				p->motorspeed_r=0;
+		  	}
+		  	else if((p->right_pos+p->left_pos)/2- p->startpos < -(p->dist-d)){ // Deacceleration
+				p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  	}
+		  	else if(p->motorspeed_l>p->speedcmd){                           // Acceleration
+				p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  	}
+		  	else {
+				p->motorspeed_l=p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				p->motorspeed_r=p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+		  	}
+		break;
 	
-	case mot_detect_line:
-		if(!(detectLine())){
-			p->motorspeed_l=p->speedcmd;
-			p->motorspeed_r=p->speedcmd;
-		}
-		else{
-			p->finished=1;
-			p->motorspeed_l=0;
-			p->motorspeed_r=0;
-		}
-	break;
+		case mot_detect_line:
+			if(!(detectLine())){
+				p->motorspeed_l=p->speedcmd;
+				p->motorspeed_r=p->speedcmd;
+			}
+			else{
+				p->finished=1;
+				p->motorspeed_l=0;
+				p->motorspeed_r=0;
+			}
+		break;
 
-	case mot_turn:
-		if (p->angle>0){ 		//Turn left
-			d_angle=p->motorspeed_r*p->motorspeed_r/(AJAX*p->w);
-			if(p->right_pos-p->startpos >= p->angle*p->w/2){
-		  		p->motorspeed_l=0;
-		  		p->motorspeed_r=0;
-		  		p->finished=1;
-			}
-			else if(p->right_pos-p->startpos > p->angle*p->w/2-d_angle*p->w/2){
-		  		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
-		  		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
-			}
-			else if(p->motorspeed_r < p->speedcmd){
-		  		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
-		  		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
-			}
-			else{									//(p->right_pos-p->startpos < p->angle*p->w/2)
-		  		p->motorspeed_r=p->speedcmd;
-		  		p->motorspeed_l=-(p->speedcmd);
-			}
-  		}
-  		else { 				//Turn right
-			d_angle=p->motorspeed_l*p->motorspeed_l/(AJAX*p->w);
-			if(p->left_pos - p->startpos >= - p->angle*p->w/2){
-		  		p->motorspeed_l=0;
-		  		p->motorspeed_r=0;
-		  		p->finished=1;
-			}
-			else if(p->left_pos-p->startpos > -p->angle*p->w/2-d_angle*p->w/2){
-		  		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
-		  		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
-			}
-			else if(p->motorspeed_l < p->speedcmd){
-		  		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
-		  		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
-			}
-			else{			//(p->left_pos-p->startpos < - p->angle*p->w/2)
-		  		p->motorspeed_l=p->speedcmd;
-		  		p->motorspeed_r=-(p->speedcmd);
-			}
-	  	}
-	break;
+		case mot_turn:
+			if (p->angle>0){ 		//Turn left
+				d_angle=p->motorspeed_r*p->motorspeed_r/(AJAX*p->w);
+				if(p->right_pos-p->startpos >= p->angle*p->w/2){
+			  		p->motorspeed_l=0;
+			  		p->motorspeed_r=0;
+			  		p->finished=1;
+				}
+				else if(p->right_pos-p->startpos > p->angle*p->w/2-d_angle*p->w/2){
+			  		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
+			  		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
+				}
+				else if(p->motorspeed_r < p->speedcmd){
+			  		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
+			  		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
+				}
+				else{									//(p->right_pos-p->startpos < p->angle*p->w/2)
+			  		p->motorspeed_r=p->speedcmd;
+			  		p->motorspeed_l=-(p->speedcmd);
+				}
+	  		}
+	  		else { 				//Turn right
+				d_angle=p->motorspeed_l*p->motorspeed_l/(AJAX*p->w);
+				if(p->left_pos - p->startpos >= - p->angle*p->w/2){
+			  		p->motorspeed_l=0;
+			  		p->motorspeed_r=0;
+			  		p->finished=1;
+				}
+				else if(p->left_pos-p->startpos > -p->angle*p->w/2-d_angle*p->w/2){
+			  		p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC;
+			  		p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC;
+				}
+				else if(p->motorspeed_l < p->speedcmd){
+			  		p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC;
+			  		p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC;
+				}
+				else{			//(p->left_pos-p->startpos < - p->angle*p->w/2)
+			  		p->motorspeed_l=p->speedcmd;
+			  		p->motorspeed_r=-(p->speedcmd);
+				}
+		  	}
+		break;
 
-	case mot_turnr:
-		if (p->angle>0){ 		//Turn left
- 			delta_r = p->dist/(p->dist-p->w/2);
-	 		delta_l = p->dist/(p->dist+p->w/2);
-	 		
-	 		if(p->right_pos-p->startpos >= p->angle*(p->dist+p->w/2)){
-		   		p->motorspeed_l=0;
-		   		p->motorspeed_r=0;
-		   		p->finished=1;
-		 	}
-		 	else if (p->right_pos-p->startpos < p->angle*(p->dist+p->w/2)){
-		   		p->motorspeed_l =  p->speedcmd*delta_l;
-		   		p->motorspeed_r =  p->speedcmd*delta_r;
-		 	}
-	   	}
-	   	else {
-		 	delta_r = p->dist/(p->dist+p->w/2);
-		 	delta_l = p->dist/(p->dist-p->w/2);
+		case mot_turnr:
+			if (p->angle>0){ 		//Turn left
+	 			delta_r = p->dist/(p->dist-p->w/2);
+		 		delta_l = p->dist/(p->dist+p->w/2);
+		 		
+		 		if(p->right_pos-p->startpos >= p->angle*(p->dist+p->w/2)){
+			   		p->motorspeed_l=0;
+			   		p->motorspeed_r=0;
+			   		p->finished=1;
+			 	}
+			 	else if (p->right_pos-p->startpos < p->angle*(p->dist+p->w/2)){
+			   		p->motorspeed_l =  p->speedcmd*delta_l;
+			   		p->motorspeed_r =  p->speedcmd*delta_r;
+			 	}
+		   	}
+		   	else {
+			 	delta_r = p->dist/(p->dist+p->w/2);
+			 	delta_l = p->dist/(p->dist-p->w/2);
 
-		 	if(p->left_pos-p->startpos >= -(p->angle*(p->dist+p->w/2))){
-		   		p->motorspeed_l=0;
-		   		p->motorspeed_r=0;
-		   		p->finished=1;
-		 	}
-		 	else if (p->left_pos-p->startpos < -( p->angle*(p->dist+p->w/2))){
-		   		p->motorspeed_l =  p->speedcmd*delta_l;
-		   		p->motorspeed_r =  p->speedcmd*delta_r;
-		 	}
-	   	}
-	break;
+			 	if(p->left_pos-p->startpos >= -(p->angle*(p->dist+p->w/2))){
+			   		p->motorspeed_l=0;
+			   		p->motorspeed_r=0;
+			   		p->finished=1;
+			 	}
+			 	else if (p->left_pos-p->startpos < -( p->angle*(p->dist+p->w/2))){
+			   		p->motorspeed_l =  p->speedcmd*delta_l;
+			   		p->motorspeed_r =  p->speedcmd*delta_r;
+			 	}
+		   	}
+		break;
 
-	case mot_followLineCenter:
-		//stop_condition: 0=stop by stop line detection, 1=stop by defined distance p->dist, 2=stop by IR obstacle detection
-		p->error_old = p->error_current;
-		p->error_current = centerOfGravity(0)-3.5;
-		p->error_sum += p->error_current;
-		pid = KP_FOR_FOLLOWLINE*p->error_current+KI_FOR_FOLLOWLINE*p->error_sum+KD_FOR_FOLLOWLINE*(p->error_current-p->error_old);
-		if(	p->stop_condition==0 && !stopLine()){
-			p->motorspeed_l = p->speedcmd - pid;
-			p->motorspeed_r = p->speedcmd + pid;
-		}
-		else if(p->stop_condition==1 && p->left_pos - p->startpos < p->dist){
-			p->motorspeed_l = p->speedcmd - pid;
-			p->motorspeed_r = p->speedcmd + pid;
-		}
-		else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIS){
-			p->motorspeed_l = p->speedcmd - pid;
-			p->motorspeed_r = p->speedcmd + pid;
-		}
-		else {
-			p->motorspeed_l = 0;
-			p->motorspeed_r = 0;
-			p->finished = 1;
-		}
-	break;
+		case mot_followLineCenter:
+			//stop_condition: 0=stop by stop line detection, 1=stop by defined distance p->dist, 2=stop by IR obstacle detection
+			p->error_old = p->error_current;
+			p->error_current = centerOfGravity(0)-3.5;
+			p->error_sum += p->error_current;
+			pid = KP_FOR_FOLLOWLINE*p->error_current+KI_FOR_FOLLOWLINE*p->error_sum+KD_FOR_FOLLOWLINE*(p->error_current-p->error_old);
+			if(	p->stop_condition==0 && !stopLine()){
+				p->motorspeed_l = p->speedcmd - pid;
+				p->motorspeed_r = p->speedcmd + pid;
+			}
+			else if(p->stop_condition==1 && p->left_pos - p->startpos < p->dist){
+				p->motorspeed_l = p->speedcmd - pid;
+				p->motorspeed_r = p->speedcmd + pid;
+			}
+			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIS){
+				p->motorspeed_l = p->speedcmd - pid;
+				p->motorspeed_r = p->speedcmd + pid;
+			}
+			else {
+				p->motorspeed_l = 0;
+				p->motorspeed_r = 0;
+				p->finished = 1;
+			}
+		break;
 
-	//must not be used with stopLine() as stopcondition
-    case mot_followRightLine:
-        if (p->right_pos - p->startpos < p->dist) {
-            p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
-            p->motorspeed_r = p->speedcmd  + K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
-		}
-		else{
-			p->motorspeed_l = 0;
-			p->motorspeed_r = 0;
-			p->finished = 1;
-		}
-	break;
-    
-    case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
-        p->error_old = p->error_current;
-        p->error_current = getDistIR(IR_dist)[0] - p->dist;
-        p->error_sum += p->error_current;
-        pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
-        if(p->stop_condition==0){                     // Stopcon: 0 for hole in wall, 1 for object on the other side
-            if(getDistIR(IR_dist)[0] < 70){
-                p->motorspeed_l=p->speedcmd - pid;
-                p->motorspeed_r=p->speedcmd + pid;
-            }
-            else{
-                p->motorspeed_l = 0;
-                p->motorspeed_r = 0;
-                p->finished = 1;
-            }
-        } if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
-            if(pid > p->speedcmd){                      // Speedlimit
-                pid = p->speedcmd;
-            }
-            if(getDistIR(IR_dist)[4] > 10){
-                p->motorspeed_l=p->speedcmd - pid;
-                p->motorspeed_r=p->speedcmd + pid;
-            }
-            else{
-                p->motorspeed_l = 0;
-                p->motorspeed_r = 0;
-                p->finished = 1;
-            }
-        } else{
-                p->motorspeed_l = 0;
-                p->motorspeed_r = 0;
-                p->finished = 1;
-        }
-	break;
+		//must not be used with stopLine() as stopcondition
+		case mot_followRightLine:
+		    if (p->right_pos - p->startpos < p->dist) {
+		        p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
+		        p->motorspeed_r = p->speedcmd  + K_FOR_FOLLOWLINE*(rightMostPosSlope() - 2.5);
+			}
+			else{
+				p->motorspeed_l = 0;
+				p->motorspeed_r = 0;
+				p->finished = 1;
+			}
+		break;
+		
+		case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
+		    p->error_old = p->error_current;
+		    p->error_current = getDistIR(IR_dist)[0] - p->dist;
+		    p->error_sum += p->error_current;
+		    pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
+		    if(p->stop_condition==0){                     // Stopcon: 0 for hole in wall, 1 for object on the other side
+		        if(getDistIR(IR_dist)[0] < 70){
+		            p->motorspeed_l=p->speedcmd - pid;
+		            p->motorspeed_r=p->speedcmd + pid;
+		        }
+		        else{
+		            p->motorspeed_l = 0;
+		            p->motorspeed_r = 0;
+		            p->finished = 1;
+		        }
+		    } if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+		        if(pid > p->speedcmd){                      // Speedlimit
+		            pid = p->speedcmd;
+		        }
+		        if(getDistIR(IR_dist)[4] > 10){
+		            p->motorspeed_l=p->speedcmd - pid;
+		            p->motorspeed_r=p->speedcmd + pid;
+		        }
+		        else{
+		            p->motorspeed_l = 0;
+		            p->motorspeed_r = 0;
+		            p->finished = 1;
+		        }
+		    } else{
+		            p->motorspeed_l = 0;
+		            p->motorspeed_r = 0;
+		            p->finished = 1;
+		    }
+		break;
 
-	//follows wall using the right IR sensor until no wall is detected anymore
-    case mot_follow_wall_right:   
-        p->error_old = p->error_current;
-        p->error_current = getDistIR(IR_dist)[4] - p->dist;
-        p->error_sum += p->error_current;
-        pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
-		if(p->stop_condition==0){                     // stopcon: 0 for hole in wall, 1 for object on the other side
-            if(getDistIR(IR_dist)[4] < 70){
-                p->motorspeed_l=p->speedcmd - pid;
-                p->motorspeed_r=p->speedcmd + pid;
-            }
-            else{
-                p->motorspeed_l = 0;
-                p->motorspeed_r = 0;
-                p->finished = 1;
-            }
-        } if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
-            if(pid > p->speedcmd){                      //Speedlimit
-                pid = p->speedcmd;
-            }
-            if(getDistIR(IR_dist)[0] > 10){
-                p->motorspeed_l=p->speedcmd - pid;
-                p->motorspeed_r=p->speedcmd + pid;
-            }
-            else{
-                p->motorspeed_l = 0;
-                p->motorspeed_r = 0;
-                p->finished = 1;
-            }
-        } else{
-                p->motorspeed_l = 0;
-                p->motorspeed_r = 0;
-                p->finished = 1;
-        }
-	break;
+		//follows wall using the right IR sensor until no wall is detected anymore
+		case mot_follow_wall_right:   
+		    p->error_old = p->error_current;
+		    p->error_current = getDistIR(IR_dist)[4] - p->dist;
+		    p->error_sum += p->error_current;
+		    pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
+			if(p->stop_condition==0){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+		        if(getDistIR(IR_dist)[4] < 70){
+		            p->motorspeed_l=p->speedcmd - pid;
+		            p->motorspeed_r=p->speedcmd + pid;
+		        }
+		        else{
+		            p->motorspeed_l = 0;
+		            p->motorspeed_r = 0;
+		            p->finished = 1;
+		        }
+		    } if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+		        if(pid > p->speedcmd){                      //Speedlimit
+		            pid = p->speedcmd;
+		        }
+		        if(getDistIR(IR_dist)[0] > 10){
+		            p->motorspeed_l=p->speedcmd - pid;
+		            p->motorspeed_r=p->speedcmd + pid;
+		        }
+		        else{
+		            p->motorspeed_l = 0;
+		            p->motorspeed_r = 0;
+		            p->finished = 1;
+		        }
+		    } else{
+		            p->motorspeed_l = 0;
+		            p->motorspeed_r = 0;
+		            p->finished = 1;
+		    }
+		break;
 
-	case mot_follow_wall_between:
-		if(getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd > 0){
-			p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-			p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-		} else if (getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd < 0){
-			if (getDistIR(IR_dist)[0] < getDistIR(IR_dist)[4] &&
-			 (odo.theta - odo.theta_ref) <  0.52){ //Left closest //0.52 rad ~= 30deg
+		case mot_follow_wall_between:
+			if(getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd > 0){
 				p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
 				p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-			} else if (getDistIR(IR_dist)[0] > getDistIR(IR_dist)[4] &&
-			   (odo.theta - odo.theta_ref) > -0.52){ //right closest //0.52 rad ~= 30deg
-				p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-				p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-			} else {
-				p->motorspeed_l = p->speedcmd;
-				p->motorspeed_r = p->speedcmd;
+			} 
+			else if (getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd < 0){
+				if (getDistIR(IR_dist)[0] < getDistIR(IR_dist)[4] &&
+				 (odo.theta - odo.theta_ref) <  0.52){ //Left closest //0.52 rad ~= 30deg
+					p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+					p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+				} 
+				else if (getDistIR(IR_dist)[0] > getDistIR(IR_dist)[4] &&
+				   (odo.theta - odo.theta_ref) > -0.52){ //right closest //0.52 rad ~= 30deg
+					p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+					p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+				} 
+				else {
+					p->motorspeed_l = p->speedcmd;
+					p->motorspeed_r = p->speedcmd;
+				}
+			} 
+			else{
+				p->motorspeed_l = 0;
+				p->motorspeed_r = 0;
+				p->finished = 1;
 			}
-		} else{
-			p->motorspeed_l = 0;
-			p->motorspeed_r = 0;
-			p->finished = 1;
-		}
-	break;
-	//printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_ref, odo.theta);
+		break;
+		//printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_ref, odo.theta);
 	
-	//follows black line on the left side until a stop line is detected
-	//must not be used with stopLine() as stopcondition
-	case mot_followLeftLine:
-		if (p->right_pos - p->startpos < p->dist) {
-			p->motorspeed_l = p->speedcmd - KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
-			p->motorspeed_r = p->speedcmd + KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
-		}
-		else {
-			p->motorspeed_l = 0;
-			p->motorspeed_r = 0;
-			p->finished = 1;
-		}
-	break;
+		//follows black line on the left side until a stop line is detected
+		//must not be used with stopLine() as stopcondition
+		case mot_followLeftLine:
+			if (p->right_pos - p->startpos < p->dist) {
+				p->motorspeed_l = p->speedcmd - KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
+				p->motorspeed_r = p->speedcmd + KP_FOR_FOLLOWLINE*(leftMostNegSlope() - 4.5);
+			}
+			else {
+				p->motorspeed_l = 0;
+				p->motorspeed_r = 0;
+				p->finished = 1;
+			}
+		break;
 	}
 }
 
