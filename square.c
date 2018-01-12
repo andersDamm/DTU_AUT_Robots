@@ -88,6 +88,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define CRITICAL_BLACK_VALUE 0.8
 #define IS_SIMULATION 1 //1=simulation, 0=real world
 #define CRIT_NR_BLACK_LINE 6
+#define DONT_CARE 0
 
 
 typedef struct{ //input signals
@@ -197,7 +198,9 @@ odotype odo;
 smtype mission;
 motiontype mot;
 
-enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_followRightLine,ms_followLeftLine,ms_follow_wall,ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end,ms_wall_gate};
+enum {ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,ms_followRightLine,
+ms_followLeftLine,ms_follow_wall,ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end,
+ms_wall_gate,ms_last_box};
 
 int main()
 {
@@ -352,7 +355,7 @@ switch (mission.state) {
 		}
 	break;
 
-	case ms_fwd:  // Cond: 0 for dist, 1 for wall detection
+	case ms_fwd:  //stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
 		if (fwd(dist,0.6,0,mission.time)){  mission.state=ms_turn;} // Square min ven
 	break;
 
@@ -402,7 +405,7 @@ switch (mission.state) {
 
     case ms_wall_gate:
         if(n==0){
-            if(turn(90.0/180*M_PI),0.2,mission.time){
+            if(turn(90.0/180*M_PI,0.2,mission.time)){
                 mission.time=-1; n=1;
             }
         }
@@ -412,22 +415,22 @@ switch (mission.state) {
             }
         }
         else if(n==2){
-            if(){
+            if(1){
                 mission.time=-1; n=3;
             }
         }
         else if(n==3){
-            if(){
+            if(1){
                 mission.time=-1; n=4;
             }
         }
         else if(n==4){
-            if(){
+            if(1){
                 mission.time=-1; n=5;
             }
         }
         else if(n<20){
-            if(){
+            if(1){
                 n=0;mission.state=ms_end;
             }
         }
@@ -439,12 +442,12 @@ switch (mission.state) {
 	  		if(followLineCenter(4, 0.3, 2, mission.time)){
 				mission.time=-1; n=1;
 	  		}
-		}else if(n==1){
-		  	if(fwd(0.50,0.3,mission.time)){
+		}else if(n==1){	//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+		  	if(fwd(0.50,0.3,0,mission.time)){
 				mission.time=-1; n=2;
 		  	}
 		}else if(n==2){
-		  	if(fwd(0.85,-0.3,mission.time)){
+		  	if(fwd(0.85,-0.3,0,mission.time)){
 				mission.time=-1; n = 3;
 		  	}
 		}else if(n==3){
@@ -452,7 +455,7 @@ switch (mission.state) {
 				mission.time=-1; n = 4;
 		  	}
 		}else if(n==4){                                      // Drive till line found
-		  	if(fwd(0,0.2,mission.time)){
+		  	if(fwd(0,0.2,2,mission.time)){
 				mission.time=-1; n = 5;
 		  	}
 		}else if(n==5){
@@ -464,8 +467,8 @@ switch (mission.state) {
 				mission.time=-1; n = 7;
 		  	}
 		}
-	 	else if(n==7){
-		  	if(fwd(0.1,0.2,mission.time)){
+	 	else if(n==7){	//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+		  	if(fwd(0.1,0.2,0,mission.time)){
 				mission.time = -1; n = 8;
 		  	}
 		}
@@ -480,7 +483,7 @@ switch (mission.state) {
 		  	}
 		}
 	 	else if(n==11){
-		  	if(fwd(0.20,0.3,mission.time)){
+		  	if(fwd(0.20,0.3,0,mission.time)){
 				mission.time=-1; n = 12;
 		  	}
 	 	}
@@ -496,7 +499,7 @@ switch (mission.state) {
 	  	}	
 	  	else if(n == 14){
 		    n=0;
-		    emission.state=ms_end;
+		    mission.state=ms_end;
 	  	}
   	break;
 
@@ -506,12 +509,12 @@ switch (mission.state) {
 	  if(followLineCenter(4,0.3, 2, mission.time)){
 		mission.time=-1; n=1;
 	  }
-	}else if(n==1){
-	  if(fwd(0.50,0.3,mission.time)){
+	}else if(n==1){//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+	  if(fwd(0.50,0.3,0,mission.time)){
 		mission.time=-1; n=2;
 	  }
 	}else if(n==2){
-	  if(fwd(0.85,-0.3,mission.time)){
+	  if(fwd(0.85,-0.3,0,mission.time)){
 		mission.time=-1; n = 3;
 	  }
 	}else if(n==3){
@@ -519,7 +522,7 @@ switch (mission.state) {
 		mission.time=-1; n = 4;
 	  }
 	}else if(n==4){                                      // Drive till line found
-	  if(fwd(0,0.2,mission.time)){
+	  if(fwd(0,0.2,2,mission.time)){
 		mission.time=-1; n = 5;
 	  }
 	}else if(n==5){
@@ -532,7 +535,7 @@ switch (mission.state) {
 	  }
 	}
 	 else if(n==7){
-	  if(fwd(0.1,0.2,mission.time)){
+	  if(fwd(0.1,0.2,0,mission.time)){
 	mission.time = -1; n = 8;
 	  }
 	}
@@ -546,8 +549,8 @@ switch (mission.state) {
 		mission.time=-1; n = 11;
 	  }
 	}
-	 else if(n==11){
-	  if(fwd(0.20,0.3,mission.time)){
+	 else if(n==11){//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+	  if(fwd(0.20,0.3,0,mission.time)){
 		mission.time=-1; n = 12;
 	  }
 	 }
@@ -567,21 +570,25 @@ switch (mission.state) {
   break;
 
   case ms_last_box:
-  	if(n==0){	//follow black line until walldetection
-  		if(mot_fwd_until_walldetection(0.3,mission.time)){
+  	if(n==0){	//follow black line until walldetection 2
+  		if(followLineCenter(0.2, 0.3,2, mission.time)){
   			mission.time = -1;
   			n=1;
   		}
   	}			//turn 90 degrees CCW
   	else if(n==1){
-  		/*if(turn(-90*180/M_PI, double speed,int time)){
-  			mission.time = -1;
-  			n=2;
-  		}*/ 
-  	}
-  	else if(n==2){	//follow right wall until no wall detected   //Side = 0 = left   Side = 1 = right   Side = 2 = middle  // Cond: 0 for hole in wall, 1 for object on opposite side
-  		//if(follow_wall(1, double dist, double speed, 0, mission.time))
-  	}
+		if(turn(90/180*M_PI, 0.1,mission.time)){
+			mission.time = -1;
+			n = 2;
+		}
+	}
+	else if(n==2){
+		if(follow_wall(1, 0.2, 0.3, 0, mission.time)){
+			mission.time = -1;
+			n = 3;
+		}
+	}
+  	
 }
 
   /**********************************
@@ -689,9 +696,6 @@ void update_motcon(motiontype *p){
                 if(p->speedcmd < 0){
                     p->curcmd=mot_reverse;
                 }
-                else if(p->dist == 0){ // Activate move to detecting line
-                    p->curcmd = mot_detect_line;
-                } 
                 else{
                     p->curcmd=mot_move;
                 }
@@ -710,7 +714,7 @@ void update_motcon(motiontype *p){
                     p->startpos=p->right_pos;
                 else
                     p->startpos=p->left_pos;
-                    p->curcmd=mot_turnr;
+                p->curcmd=mot_turnr;
             break;
 
             case mot_followLineCenter:
@@ -923,7 +927,7 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
-			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIS){
+			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIST){
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
@@ -1020,19 +1024,19 @@ void update_motcon(motiontype *p){
 
 		case mot_follow_wall_between:
 			if(getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd > 0){
-				p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-				p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+				p->motorspeed_l = p->speedcmd - (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+				p->motorspeed_r = p->speedcmd + (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
 			} 
 			else if (getDistIR(IR_dist)[0] < 70 && getDistIR(IR_dist)[4] < 70 && p->speedcmd < 0){
 				if (getDistIR(IR_dist)[0] < getDistIR(IR_dist)[4] &&
 				 (odo.theta - odo.theta_ref) <  0.52){ //Left closest //0.52 rad ~= 30deg
-					p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-					p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+					p->motorspeed_l = p->speedcmd - (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+					p->motorspeed_r = p->speedcmd + (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
 				} 
 				else if (getDistIR(IR_dist)[0] > getDistIR(IR_dist)[4] &&
 				   (odo.theta - odo.theta_ref) > -0.52){ //right closest //0.52 rad ~= 30deg
-					p->motorspeed_l = p->speedcmd - (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-					p->motorspeed_r = p->speedcmd + (K_FOLLOW_WALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+					p->motorspeed_l = p->speedcmd - (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
+					p->motorspeed_r = p->speedcmd + (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
 				} 
 				else {
 					p->motorspeed_l = p->speedcmd;
@@ -1063,7 +1067,8 @@ void update_motcon(motiontype *p){
 	}
 }
 
-int fwd(double dist, double speed, int condition,int time){        // Cond: 0 for dist, 1 for wall detection
+// stop condition: 0 for dist, 1 for wall detection, 2 for 
+int fwd(double dist, double speed, int condition,int time){        
 	if (time==0){
 		mot.cmd=mot_move;
 		mot.speedcmd=speed;
