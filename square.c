@@ -92,6 +92,15 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define CRIT_NR_BLACK_LINE 6
 #define DONT_CARE 0
 
+/* 	DB_STOPCOND
+* 	fwd: 				0=stop by dist	1=stop by wall detection	
+						2=stop by line black line detection		3=stop by right IR sensor
+* 	followLineCenter: 	0=stopline		1=dist 		2=object in front
+*	follow_wall: 		0=hole in wall 	1=object on the other side
+*
+*/
+
+
 
 typedef struct{ //input signals
 		int left_enc,right_enc; // encoderticks
@@ -322,6 +331,9 @@ if (lmssrv.connected){
   mission.state=ms_init;
   mission.oldstate=-1;
 
+/*
+* 	Check simulation / real world
+*/
 if(IS_SIMULATION){
     printf("Shit I'm caught in a simulation!\n");
 	for(n=0;n<5;n++){
@@ -329,6 +341,9 @@ if(IS_SIMULATION){
 		Kb_IR[n] = Kb_IR_sim[n];
 	}
     n=0;
+}
+else{
+	printf("REAL WORLD!!!!!!!!!!\n");
 }
   /*
    * Run loop
@@ -362,11 +377,10 @@ switch (mission.state) {
 	case ms_init:
 		n=0; dist=0.5;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
-            mission.state=ms_wall_gate;
+            mission.state=ms_last_box;
             printf("Beginning the wall_gate in the sim!\n");
         } else{
-            mission.state= ms_PushNDrive_RW;
-            printf("Beginning the box-moving in the RW!\n");
+            mission.state=ms_last_box;
         }
 	break;
 
@@ -460,7 +474,7 @@ switch (mission.state) {
     }
     else if(n==7){
       if(turn(-90.0/180*M_PI,0.3,mission.time)){
-	mission.time =-1; n=8;
+	  mission.time =-1; n=8;
       }
     }
     else if(n==8){
@@ -686,26 +700,86 @@ switch (mission.state) {
 
     break;
 
-  case ms_last_box:
+  case ms_last_box:	
   	if(n==0){	//follow black line until walldetection 2
   		if(followLineCenter(0.2, 0.3,2, mission.time)){
   			mission.time = -1;
-  			n=1;
+  			n++;
   		}
   	}			//turn 90 degrees CCW
   	else if(n==1){
-		if(turn(90/180*M_PI, 0.1,mission.time)){
+		if(turn(90.0*M_PI/180, 0.3,mission.time)){
 			mission.time = -1;
-			n = 2;
+			n++;
 		}
+
 	}
 	else if(n==2){
-		if(follow_wall(1, 0.2, 0.3, 0, mission.time)){
+		if(fwd(70,0.2,3,mission.time)){
 			mission.time = -1;
-			n = 3;
+			n++;
 		}
 	}
-  	
+	else if(n==3){
+		if(fwd(0.40,0.2,0,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==4){
+		if(turn(-90.0*M_PI/180, 0.3,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==5){
+		if(fwd(0.35,0.2,0,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==6){
+		if(turn(-180.0*M_PI/180, 0.5,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==7){
+		if(fwd(0.35,0.2,0,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==8){
+		if(turn(90*M_PI/180, 0.2,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==9){
+		if(fwd(0.35,0.2,2,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==10){
+		if(fwd(0.2,0.2,0,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==11){
+		if(turn(90*M_PI/180, 0.2,mission.time)){
+			mission.time = -1;
+			n++;
+		}
+	}
+	else if(n==12){
+		if(followLineCenter(0.2, 0.2,2, mission.time)){
+  			mission.time = -1;
+  			n++;
+  		}
+	}
 }
 
   /**********************************
@@ -717,8 +791,6 @@ switch (mission.state) {
 	 poseTimeLog_a[counter].y = odo.y_pos;
 	 poseTimeLog_a[counter].theta = odo.theta;
 	 counter++;
-   } else{
-	 printf("array out of bounds\n");
    }
 
 /*  end of mission  */
@@ -818,11 +890,11 @@ void update_motcon(motiontype *p){
 			break;
 
 			case mot_turn:
-            if (p->angle > 0)
-                p->startpos=p->right_pos;
-            else
-                p->startpos=p->left_pos;
-                p->curcmd=mot_turn;
+		        if (p->angle > 0)
+		            p->startpos=p->right_pos;
+		        else
+		            p->startpos=p->left_pos;
+		        p->curcmd=mot_turn;
             break;
 
             case mot_turnr:
@@ -865,7 +937,7 @@ void update_motcon(motiontype *p){
             	p->curcmd=mot_follow_wall_between;
             break;
    		}
-   	p->cmd=0;
+   		p->cmd=0;
  	}
 
 	switch (p->curcmd){
@@ -916,6 +988,10 @@ void update_motcon(motiontype *p){
 		  		}
 			}
 			else if(p->stop_condition==2 && !detectLine() ){
+				p->motorspeed_l=p->speedcmd;
+				p->motorspeed_r=p->speedcmd;
+			}
+			else if(p->stop_condition==3 && getDistIR(IR_dist)[4] < p->dist){
 				p->motorspeed_l=p->speedcmd;
 				p->motorspeed_r=p->speedcmd;
 			}
@@ -1048,7 +1124,7 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
-			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIST){
+			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIST){	//OBSTACLE_DIST
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
@@ -1076,88 +1152,94 @@ void update_motcon(motiontype *p){
 			}
 		break;
 		
-    case mot_followWhiteLine:
+		case mot_followWhiteLine:
 
-      if(minDistFrontIR() > OBSTACLE_DIST && p->left_pos - p->startpos < p->dist){
-	    p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(maxIntensity() - 3.5);
-            p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(maxIntensity() - 3.5);
-      }
-      else {
-        p->motorspeed_l = 0;
-        p->motorspeed_r = 0;
-        p->finished = 1;
-      }
-    break;
+		  if(minDistFrontIR() > OBSTACLE_DIST && p->left_pos - p->startpos < p->dist){
+			p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(maxIntensity() - 3.5);
+		        p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(maxIntensity() - 3.5);
+		  }
+		  else {
+		    p->motorspeed_l = 0;
+		    p->motorspeed_r = 0;
+		    p->finished = 1;
+		  }
+		break;
 
-    case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
-		    p->error_old = p->error_current;
-		    p->error_current = getDistIR(IR_dist)[0] - p->dist;
-		    p->error_sum += p->error_current;
-		    pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
-		    if(p->stop_condition==0){                     // Stopcon: 0 for hole in wall, 1 for object on the other side
-                if(getDistIR(IR_dist)[0] < 70){
-		            p->motorspeed_l=p->speedcmd - pid;
-		            p->motorspeed_r=p->speedcmd + pid;
-		        }
-		        else{
-		            p->motorspeed_l = 0;
-		            p->motorspeed_r = 0;
-		            p->finished = 1;
-		        }
-		    } if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
-		        if(pid > 0.7*p->speedcmd){                      // Speedlimit
-		            pid = 0.7*p->speedcmd;
-		        }
+		case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
+			p->error_old = p->error_current;
+			p->error_current = getDistIR(IR_dist)[0] - p->dist;
+			p->error_sum += p->error_current;
+			pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
+			if(p->stop_condition==0){                     // Stopcon: 0 for hole in wall, 1 for object on the other side
+				if(getDistIR(IR_dist)[0] < 70){
+			        p->motorspeed_l=p->speedcmd - pid;
+			        p->motorspeed_r=p->speedcmd + pid;
+			    }
+			    else{
+			        p->motorspeed_l = 0;
+			        p->motorspeed_r = 0;
+			        p->finished = 1;
+			    }
+			} 
+			if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+			    if(pid > p->speedcmd){                      // Speedlimit
+			        pid = p->speedcmd;
+			    }
 		        if(getDistIR(IR_dist)[4] > 20 || getDistIR(IR_dist)[4] < 0){
-		            p->motorspeed_l=p->speedcmd - pid;
-		            p->motorspeed_r=p->speedcmd + pid;
-		        }
-		        else{
-		            p->motorspeed_l = 0;
-		            p->motorspeed_r = 0;
-		            p->finished = 1;
-		        }
-		    } else{
-		            p->motorspeed_l = 0;
-		            p->motorspeed_r = 0;
-		            p->finished = 1;
-		    }
+			        p->motorspeed_l=p->speedcmd - pid;
+			        p->motorspeed_r=p->speedcmd + pid;
+			    }
+			    else{
+			        p->motorspeed_l = 0;
+			        p->motorspeed_r = 0;
+			        p->finished = 1;
+			    }
+			} 
+			else{
+			        p->motorspeed_l = 0;
+			        p->motorspeed_r = 0;
+			        p->finished = 1;
+			}
 		break;
 
 		//follows wall using the right IR sensor until no wall is detected anymore
 		case mot_follow_wall_right:   
-		    p->error_old = p->error_current;
-		    p->error_current = getDistIR(IR_dist)[4] - p->dist;
-		    p->error_sum += p->error_current;
-		    pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
+			p->error_old = p->error_current;
+			p->error_current = getDistIR(IR_dist)[4] - p->dist;
+			p->error_sum += p->error_current;
+			pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
 			if(p->stop_condition==0){                     // stopcon: 0 for hole in wall, 1 for object on the other side
-		        if(getDistIR(IR_dist)[4] < 70){
-		            p->motorspeed_l=p->speedcmd - pid;
-		            p->motorspeed_r=p->speedcmd + pid;
-		        }
-		        else{
-		            p->motorspeed_l = 0;
-		            p->motorspeed_r = 0;
-		            p->finished = 1;
-		        }
-		    } if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
-		        if(pid > p->speedcmd){                      //Speedlimit
-		            pid = p->speedcmd;
-		        }
+				printf("IR distance = %f\n",getDistIR(IR_dist)[4]);
+			    if(getDistIR(IR_dist)[4] < 70){
+					printf("Mission.time = %d\n",mission.time);
+			        p->motorspeed_l=p->speedcmd - pid;
+			        p->motorspeed_r=p->speedcmd + pid;
+			    }
+			    else{
+					printf("Mission.time[finished] = %d\n",mission.time);
+			    	p->motorspeed_l = 0;
+			    	p->motorspeed_r = 0;
+			    	p->finished = 1;
+			    }
+			} 
+			else if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+			    if(pid > p->speedcmd){                      //Speedlimit
+			        pid = p->speedcmd;
+			    }
 		        if(getDistIR(IR_dist)[0] > 20 || getDistIR(IR_dist)[0] < 0){
-		            p->motorspeed_l=p->speedcmd - pid;
-		            p->motorspeed_r=p->speedcmd + pid;
-		        }
-		        else{
-		            p->motorspeed_l = 0;
-		            p->motorspeed_r = 0;
-		            p->finished = 1;
-		        }
-		    } else{
-		            p->motorspeed_l = 0;
-		            p->motorspeed_r = 0;
-		            p->finished = 1;
-		    }
+			        p->motorspeed_l=p->speedcmd - pid;
+			        p->motorspeed_r=p->speedcmd + pid;
+			    }
+			    else{
+			        p->motorspeed_l = 0;
+			        p->motorspeed_r = 0;
+			        p->finished = 1;
+			    }
+			} else{
+			        p->motorspeed_l = 0;
+			        p->motorspeed_r = 0;
+			        p->finished = 1;
+			}
 		break;
 
 		case mot_follow_wall_between:
@@ -1219,29 +1301,28 @@ int fwd(double dist, double speed, int condition,int time){
 		return mot.finished;
 }
 int turn(double angle, double speed,int time){
-  if (time==0){
-	mot.cmd=mot_turn;
-	mot.speedcmd=speed;
-	mot.angle=angle;
-	mot.start_angle=odo.theta;
-	odo.theta_ref=odo.theta_ref + angle; //Update the desired angle
-	return 0;
-}
-else
-	return mot.finished;
+ 	if (time==0){
+		mot.cmd=mot_turn;
+		mot.speedcmd=speed;
+		mot.angle=angle;
+		mot.start_angle=odo.theta;
+		odo.theta_ref=odo.theta_ref + angle; //Update the desired angle
+		return 0;
+	}
+	else
+		return mot.finished;
 }
 int turnr(double radius, double angle, double speed, int time){
- if(time == 0){
-   mot.cmd = mot_turnr;
-   mot.speedcmd = speed;
-   mot.dist = radius;
-   mot.angle = angle;
-	 odo.theta_ref=odo.theta_ref + angle; //Update the desired angle
-   return 0;
- }
- else
-   return mot.finished;
-
+	if(time == 0){
+   		mot.cmd = mot_turnr;
+   		mot.speedcmd = speed;
+   		mot.dist = radius;
+   		mot.angle = angle;
+		odo.theta_ref=odo.theta_ref + angle; //Update the desired angle
+   	return 0;
+ 	}
+ 	else
+   		return mot.finished;
 }
 int followLineCenter(double dist, double speed,int condition, int time){   // linesensor input???
   if(time == 0){
@@ -1301,13 +1382,13 @@ int followLeftLine(double dist, double speed, int time){   // linesensor input??
 }
 
 void sm_update(smtype *p){
-  if (p->state!=p->oldstate){
-	p->time=0;
-	p->oldstate=p->state;
-}
-else {
-	p->time++;
-}
+	if (p->state!=p->oldstate){
+		p->time=0;
+		p->oldstate=p->state;
+	}
+	else {
+		p->time++;
+	}
 }
 
 int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
@@ -1323,7 +1404,8 @@ int log_data_to_file(poseTimeLog_t * poseTimeLog_out, int size){
 	return 1;
 	}
 	for(i = 0;i < size; i++) {
-		fprintf(outFile,"%i,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",poseTimeLog_out[i].time, poseTimeLog_out[i].x, poseTimeLog_out[i].y, poseTimeLog_out[i].theta,
+		fprintf(outFile,"%i,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",poseTimeLog_out[i].time, 
+poseTimeLog_out[i].x, poseTimeLog_out[i].y, poseTimeLog_out[i].theta,
 input[7],input[6],input[5],input[4],input[3],input[2],input[1],input[0]);
 	}
 	fclose(outFile);
