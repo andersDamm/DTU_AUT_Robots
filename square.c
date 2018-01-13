@@ -580,7 +580,6 @@ switch (mission.state) {
   case ms_PushNDrive_RW:
 	//printf("n: %d \n", n);
 	if(n==0){
-	    printf("IR dist: %f\tLaserpar: %f\n", minDistFrontIR(), laserpar[4]);
 	    if(followLineCenter(0.2,0.2, 1, mission.time)){
 		mission.time=-1; n=1;
 	  }
@@ -645,46 +644,40 @@ switch (mission.state) {
 
     case ms_wall_gate:
         if(n==0){ //Turn the same way as the line
-            printf("Turn\n");
             if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
                 mission.time =-1; n=1;
             }
         } else if(n==1){  //Follow the line through the first gate, 1=distance
-        printf("Followline\n");
-            if(followLineCenter(0.4, 0.2, 1, mission.time)){
+            if(followLineCenter(0.3, 0.2, 1, mission.time)){
                 mission.time =-1; n=2;
             }
         } else if(n==2){  // Turn to wall
-        printf("Turn\n");
             if(turnr(0.2,100.0/180*M_PI,0.3,mission.time)){
                 mission.time =-1; n=3;
             }
-        } else if(n==3){ //Follow wall till inside gate, s=0=left, cond=1  //TODO: It nearly skips this
-        printf("Follow wall\n");
-            if(follow_wall(2, 20, 0.1, 1, mission.time)){ // Stopcon: 0 for hole in wall, 1 for object on the other side
+        } else if(n==3){ //Follow wall till inside gate, s=0=left, cond=1
+            if(follow_wall(0, 35, 0.2, 1, mission.time)){ // Stopcon: 0 for hole in wall, 1 for object on the other side
                 mission.time =-1; n=4;
             } 
         } else if(n==4){
-        printf("Followline\n");
-            if(followLineCenter(4, 0.2, 0, mission.time)){  // Cond: 0 for stopline, 1 for dist, 2 for object in front
+            if(fwd(0, 0.2, 2, mission.time)){  // Cond: 0 dist, 1 wall IR detect, 2 bl detect
                 mission.time =-1; n=5;
             }
-        } else if(n==5){
-        printf("Turn\n");
-            if(turnr(0.2,90/180*M_PI,0.3,mission.time)){
+        } else if(n==5){  
+            if(turnr(0.25,90.0/180*M_PI,0.3,mission.time)){
                 mission.time =-1; n=6;
             }
         } else if(n==6){
-            if(followLineCenter(4, 0.2, 0, mission.time)){
+            if(followLineCenter(4, 0.2, 0, mission.time)){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
                 mission.time =-1; n=7;
             }
         } else if(n==7){
-            if(turnr(0.2,90/180*M_PI,0.3,mission.time)){
+            if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
                 mission.time =-1; n=8;
             }
         } else if(n==8){
             if(followLineCenter(4, 0.2, 0, mission.time)){
-                mission.time =-1; n=7;
+                mission.time =-1; n=9;
             }
         } else if(n>8){
             mission.state=ms_end;
@@ -1056,7 +1049,6 @@ void update_motcon(motiontype *p){
 				p->motorspeed_r = p->speedcmd + pid;
 			}
 			else if(p->stop_condition==2 && minDistFrontIR() > OBSTACLE_DIST){
-                printf("Dist: %f\n", minDistFrontIR());
 				p->motorspeed_l = p->speedcmd - pid;
 				p->motorspeed_r = p->speedcmd + pid;
 			}
@@ -1103,7 +1095,7 @@ void update_motcon(motiontype *p){
 		    p->error_sum += p->error_current;
 		    pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
 		    if(p->stop_condition==0){                     // Stopcon: 0 for hole in wall, 1 for object on the other side
-        if(getDistIR(IR_dist)[0] < 70){
+                if(getDistIR(IR_dist)[0] < 70){
 		            p->motorspeed_l=p->speedcmd - pid;
 		            p->motorspeed_r=p->speedcmd + pid;
 		        }
@@ -1113,10 +1105,10 @@ void update_motcon(motiontype *p){
 		            p->finished = 1;
 		        }
 		    } if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
-		        if(pid > p->speedcmd){                      // Speedlimit
-		            pid = p->speedcmd;
+		        if(pid > 0.7*p->speedcmd){                      // Speedlimit
+		            pid = 0.7*p->speedcmd;
 		        }
-		        if(getDistIR(IR_dist)[4] > 10){
+		        if(getDistIR(IR_dist)[4] > 20 || getDistIR(IR_dist)[4] < 0){
 		            p->motorspeed_l=p->speedcmd - pid;
 		            p->motorspeed_r=p->speedcmd + pid;
 		        }
@@ -1152,7 +1144,7 @@ void update_motcon(motiontype *p){
 		        if(pid > p->speedcmd){                      //Speedlimit
 		            pid = p->speedcmd;
 		        }
-		        if(getDistIR(IR_dist)[0] > 10){
+		        if(getDistIR(IR_dist)[0] > 20 || getDistIR(IR_dist)[0] < 0){
 		            p->motorspeed_l=p->speedcmd - pid;
 		            p->motorspeed_r=p->speedcmd + pid;
 		        }
@@ -1257,7 +1249,6 @@ int followLineCenter(double dist, double speed,int condition, int time){   // li
    mot.speedcmd = speed;
    mot.dist = dist;
    mot.stop_condition = condition;
-   printf("flc stopcon: %d\n", mot.stop_condition);
    return 0;
  }
  else return mot.finished;
