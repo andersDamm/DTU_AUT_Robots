@@ -148,6 +148,7 @@ typedef struct{//input
   	double error_current, error_old, error_sum;
   	//stop condition
   	int stop_condition;
+	double laser_old; //The old laservalue of laserpar[0]
 }motiontype;
 
 enum {
@@ -156,7 +157,8 @@ enum {
 	mot_follow_wall_right, mot_follow_wall_between, mot_reverse,
 	mot_detect_line,mot_followWhiteLine,
 	mot_followLineCenterTwoGatePolesDetected,
-	mot_reverseTillBlackLine, mot_driveTowardsCenterOfGate
+	mot_reverseTillBlackLine, mot_driveTowardsCenterOfGate,
+	mot_turnTowardsCenterOfGate
 };
 
 void update_motcon(motiontype *p);
@@ -209,12 +211,13 @@ int reverseTillBlackLine(double dist, double speed, int time);
 int turnTowardsCenterOfGate(double speed, int time);
 int driveTowardsCenterOfGate(double speed, int time);
 int hasFrontObjectBeenReached(double dist, double speed, int time);
+int followLineCenterTwoGatePolesDetected(double dist, double speed, int time);
 double centerOfGateWithLaserScanner();
 double distanceToCenterOfGate();
 int leftMostPillar();
 int rightMostPillar();
 double trueTillDistToFrontObjectIsReached(double dist);
-int numberOfGatePolesDetected(); //Used in the case mot_followLineCenterTwoGatePolesDetected
+int numberOfGatePolesDetected; //Used in the case mot_followLineCenterTwoGatePolesDetected
 //End of initialisation of functions used in "gateOnTheLoose"
 
 
@@ -400,7 +403,7 @@ switch (mission.state) {
 	case ms_init:
 		n=0; dist=0.5;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
-            mission.state=ms_last_box;
+            mission.state=ms_gateOnTheLoose;
             printf("Beginning the wall_gate in the sim!\n");
         } else{
             mission.state=ms_last_box;
@@ -698,7 +701,7 @@ switch (mission.state) {
 	  //The following lines untill "//end of gateOnTheLoose" should be seen as pseudocode.
 	  else if (n == 5) {
 		  if (laserpar[4] != 0) {
-			  if (fwd(laserpar[4] - DESIRED_DIST_TO_FRONT_OBJECT, 0.2, mission.time)) { mission.time = -1; n = 6; }
+			  if (fwd(0.15, 0.2,3, mission.time)) { mission.time = -1; n = 6; }
 		  }
 		  //make the robot drive towards the wall and then stop when it is about 5-15 cm from the wall (use IR sensors) what ever distance works best.
 		  //Something like:
@@ -708,10 +711,10 @@ switch (mission.state) {
 		  if (turn(90.0 / 180 * M_PI, 0.3, mission.time)) { mission.time = -1; n = 7; }
 	  }
 	  else if (n == 7) {
-		  if (follow_wall(0, 15, 0.3, mission.time)) { mission.time = -1; n = 8; } // follow the wall untill the robot drives parallel to the wall. Then in the next step use odometry to drive straight into the black line ahead.
+		  if (follow_wall(0, 15, 0.3,0, mission.time)) { mission.time = -1; n = 8; } // follow the wall untill the robot drives parallel to the wall. Then in the next step use odometry to drive straight into the black line ahead.
 	  }
 	  else if (n == 8) {
-		  if ((0, 15, 0.3, mission.time)) { mission.time = -1; n = 9; } // drive straight, untill the robot finds a black line, then stop.
+		  if (fwd(50,0.3, 2, mission.time)) { mission.time = -1; n = 9; } // drive straight, untill the robot finds a black line, then stop.
 	  }
 	  else if (n == 9) {
 		  mission.state = ms_end;
@@ -943,62 +946,62 @@ void update_motcon(motiontype *p){
 			break;
 
 			case mot_move:
-                p->startpos=(p->left_pos+p->right_pos)/2;
-                if(p->speedcmd < 0){
-                    p->curcmd=mot_reverse;
-                }
-                else{
-                    p->curcmd=mot_move;
-                }
+			    p->startpos=(p->left_pos+p->right_pos)/2;
+			    if(p->speedcmd < 0){
+				p->curcmd=mot_reverse;
+			    }
+			    else{
+				p->curcmd=mot_move;
+			    }
 			break;
 
 			case mot_turn:
-		        if (p->angle > 0)
-		            p->startpos=p->right_pos;
-		        else
-		            p->startpos=p->left_pos;
-		        p->curcmd=mot_turn;
-            break;
+			    if (p->angle > 0)
+				p->startpos=p->right_pos;
+			    else
+				p->startpos=p->left_pos;
+			    p->curcmd=mot_turn;
+			break;
 
-            case mot_turnr:
-                if (p->angle > 0)
-                    p->startpos=p->right_pos;
-                else
-                    p->startpos=p->left_pos;
-					p->curcmd=mot_turnr;
-            break;
+			case mot_turnr:
+			    if (p->angle > 0)
+				p->startpos=p->right_pos;
+			    else
+				p->startpos=p->left_pos;
+						    p->curcmd=mot_turnr;
+			break;
 
-            case mot_followLineCenter:
-                p->startpos=(p->left_pos+p->right_pos)/2;
-                p->curcmd=mot_followLineCenter;
-            break;
+			case mot_followLineCenter:
+			    p->startpos=(p->left_pos+p->right_pos)/2;
+			    p->curcmd=mot_followLineCenter;
+			break;
 
-            case mot_followWhiteLine:
-                p->startpos=(p->left_pos+p->right_pos)/2;
-                p->curcmd=mot_followWhiteLine;
-            break;
+			case mot_followWhiteLine:
+			    p->startpos=(p->left_pos+p->right_pos)/2;
+			    p->curcmd=mot_followWhiteLine;
+			break;
 
-            case mot_follow_wall_left:
-                p->curcmd=mot_follow_wall_left;
-            break;
+			case mot_follow_wall_left:
+			    p->curcmd=mot_follow_wall_left;
+			break;
 
-            case mot_follow_wall_right:
-                p->curcmd=mot_follow_wall_right;
-            break;
+			case mot_follow_wall_right:
+			    p->curcmd=mot_follow_wall_right;
+			break;
 
-            case mot_followRightLine:
-                p->curcmd=mot_followRightLine;
-                p->startpos=(p->left_pos+p->right_pos)/2;
-            break;
+			case mot_followRightLine:
+			    p->curcmd=mot_followRightLine;
+			    p->startpos=(p->left_pos+p->right_pos)/2;
+			break;
 
-            case mot_followLeftLine:
-                p->curcmd=mot_followLeftLine;
-                p->startpos=(p->left_pos+p->right_pos)/2;
-            break;
+			case mot_followLeftLine:
+			    p->curcmd=mot_followLeftLine;
+			    p->startpos=(p->left_pos+p->right_pos)/2;
+			break;
 
-            case mot_follow_wall_between:
-            	p->curcmd=mot_follow_wall_between;
-            break;
+			case mot_follow_wall_between:
+			    p->curcmd=mot_follow_wall_between;
+			break;
 
 			case mot_driveTowardsCenterOfGate:
 				p->curcmd = mot_driveTowardsCenterOfGate;
@@ -1010,6 +1013,8 @@ void update_motcon(motiontype *p){
 
 			case mot_followLineCenterTwoGatePolesDetected:
 				p->curcmd = mot_followLineCenterTwoGatePolesDetected;
+				numberOfGatePolesDetected = 0;
+				p->laser_old=0;
 				break;
    		}
    		p->cmd=0;
@@ -1361,6 +1366,24 @@ void update_motcon(motiontype *p){
 			break;
 
 		//states used in gateOnTheLoose:
+		case mot_followLineCenterTwoGatePolesDetected:
+			if (numberOfGatePolesDetected == 2) { //second gate pole detection
+				p->motorspeed_l = 0;
+				p->motorspeed_r = 0;
+				p->finished = 1;
+			} else if (p->laser_old >= 75 && laserpar[0] < 75 && laserpar[0] != 0) { //first gate pole detection
+				numberOfGatePolesDetected++;
+				p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
+				p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
+				printf("poleDetected\n");
+			} else {
+				p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
+				p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
+			}
+			if (laserpar[0]!=0) p->laser_old = laserpar[0];
+			
+			break;
+			
 		case mot_reverseTillBlackLine:
 			d = ((p->motorspeed_l + p->motorspeed_r) / 2)*((p->motorspeed_l + p->motorspeed_r) / 2) / (2 * (AJAX));
 			double input[NUMBER_OF_IRSENSORS];
@@ -1378,7 +1401,7 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 				p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 			}
-			else if ((p->right_pos + p->left_pos) / 2 - p->startpos < -(p->dist - d) && ((input[0] > CRITICAL_BLACK_VALUE) || (input[7] > CRITICAL_BLACK_VALUE)) {
+			else if ((p->right_pos + p->left_pos) / 2 - p->startpos < -(p->dist - d) && ((input[0] > CRITICAL_BLACK_VALUE) || (input[7] > CRITICAL_BLACK_VALUE))) {
 				if (input[0] > CRITICAL_BLACK_VALUE && !(input[7] > CRITICAL_BLACK_VALUE)) {
 					p->motorspeed_r = 0;
 					p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
@@ -1413,8 +1436,8 @@ void update_motcon(motiontype *p){
 
 		case mot_driveTowardsCenterOfGate:
 			if (!(laserpar[0] < 30 && laserpar[0] != 0 && laserpar[LASERSCANNER_ZONES - 1] < 30 && laserpar[LASERSCANNER_ZONES - 1] != 0)) {
-				p->motorspeed_l = p->speedcmd - K_FOR_DRIVE_TOWARDS_CENTER_OF_GATE*(centerOfGateWithLaserScanners());
-				p->motorspeed_r = p->speedcmd + K_FOR_DRIVE_TOWARDS_CENTER_OF_GATE*(centerOfGateWithLaserScanners());
+				p->motorspeed_l = p->speedcmd - K_FOR_DRIVE_TOWARDS_CENTER_OF_GATE*(centerOfGateWithLaserScanner());
+				p->motorspeed_r = p->speedcmd + K_FOR_DRIVE_TOWARDS_CENTER_OF_GATE*(centerOfGateWithLaserScanner());
 			}
 			else {
 				p->motorspeed_l = 0;
@@ -1422,7 +1445,7 @@ void update_motcon(motiontype *p){
 				p->finished = 1;
 			}
 			break;
-
+			
 		
 		//End of states used in gateOnTheLoose:
 	}
@@ -1730,7 +1753,7 @@ char detectLine(){
 
 //Functions used in gateOnTheLoose:
 //Calculation functions:
-int followLineCenterDetectTwoGatePoles(double dist, double speed, int time) {
+int followLineCenterTwoGatePolesDetected(double dist, double speed, int time) {
 	if (time == 0) {
 		mot.cmd = mot_followLineCenterTwoGatePolesDetected;
 		mot.speedcmd = speed;
@@ -1788,12 +1811,14 @@ int leftMostPillar() {
 	for (i = 0; i <= LASERSCANNER_ZONES - 1; i++) {
 		if (laserpar[i] < 50 && laserpar[i] != 0) return i;
 	}
+	return -1;
 }
 int rightMostPillar() {
 	int i;
 	for (i = LASERSCANNER_ZONES - 1; i >= 0; i++) {
 		if (laserpar[i] < 50 && laserpar[i] != 0) return i;
 	}
+	return -1;
 }
 int isLeftSideBlack() {
 	double input[NUMBER_OF_IRSENSORS];
