@@ -11,7 +11,8 @@ followline "bm"@v 0.3 :($irdistfrontmiddle <= 0.30)
 stop
 q =$irdistfrontmiddle
 
-eval "$odox+q+k"
+eval $odox+q+k
+fwd -0.3
 
 %Box gate - Task 2
 turn 90
