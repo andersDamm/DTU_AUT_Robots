@@ -1,6 +1,6 @@
 n=0
-goto "tjek"
-
+%goto "tjek"
+goto "walldebug"
 
 
 %Distance measurement - Task 1
@@ -47,21 +47,23 @@ fwd 0.3
 %Find gate - Task 3
 n=0
 label "tjek"
-followline "bm" @v 0.1 : ($irdistleft < 0.70)
+followline "bm" @v 0.08 : ($irdistleft < 0.70)
 n=n+1
 fwd 0.1
 if(n < 2) "tjek"
 fwd -0.15 @v 0.2
 turn 90
-drive @v 0.3 :  ($irdistfrontmiddle <=0.40)
+fwd 0.64
+drive @v 0.3 :  ($irdistfrontmiddle <=0.20)
 stop
-turn -115
+turn -90
 drive @v 0.2 :($crossingblackline)
 fwd 0.15
 turn 90
 
 
 %Wall - Task 4
+label "walldebug"
 followline "bm"@v 0.3 :($irdistleft < 0.70)
 fwd 0.6
 turn 90
@@ -75,7 +77,7 @@ turn 90
 fwd 0.4
 followwall "l"0.15 :($irdistleft >= 0.40)
 stop
-fwd 0.45
+fwd 0.30
 turn 90
 followline "bm" @v 0.3 :($crossingblackline)
 fwd 0.5
