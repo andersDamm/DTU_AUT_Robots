@@ -1,17 +1,17 @@
 n=0
 %goto "tjek"
-goto "walldebug"
+%goto "walldebug"
 
 
 %Distance measurement - Task 1
-k=0.175
+k=0.75
 ignoreobstacles
 followline "br"@v 0.3 :($drivendist > 1)
 followline "bm"@v 0.3 :($irdistfrontmiddle <= 0.30)
 stop
 q =$irdistfrontmiddle
 
-log "$odoy-q-k"
+eval "$odox+q+k"
 
 %Box gate - Task 2
 turn 90
