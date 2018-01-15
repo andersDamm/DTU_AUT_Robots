@@ -100,7 +100,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 //end gateOnTheLoose Definitions
 /* 	DB_STOPCOND
 * 	fwd: 				0=stop by dist	1=stop by wall detection	
-						2=stop by line black line detection		3=stop by right IR sensor
+*						2=stop by line black line detection		3=stop by right IR sensor
 * 	followLineCenter: 	0=stopline		1=dist 		2=object in front(ir)	3=object in front (laser)	4=object to the left
 *	follow_wall: 		0=hole in wall 	1=object on the other side
 *
@@ -717,7 +717,6 @@ switch (mission.state) {
 			printf("end");
 	  }
 	  break;
-		
 	  //end of gateOnTheLoose
 
     case ms_wall_gate:
@@ -1049,11 +1048,13 @@ void update_motcon(motiontype *p){
 			else if(p->stop_condition==1){
 				printf("p->dist = %f\t minDistFrontIR= %f\n",p->dist, minDistFrontIR());
 				if (minDistFrontIR()<=p->dist){
+
 					p->finished=1;
 					p->motorspeed_l=0;
 					p->motorspeed_r=0;
 	  			}
 	  			else if(minDistFrontIR() < p->dist + d){ 	// Deacceleration
+
 					p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 					p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 		  		}
@@ -1379,8 +1380,8 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
 				p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
 				printf("poleDetected\n");
-			} 
-			else {
+
+			} else {
 				p->motorspeed_l = p->speedcmd - K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
 				p->motorspeed_r = p->speedcmd + K_FOR_FOLLOWLINE*(minIntensity() - 3.5);
 			}
