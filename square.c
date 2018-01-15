@@ -102,7 +102,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 * 	fwd: 				0=stop by dist	1=stop by wall detection	
 						2=stop by line black line detection		3=stop by right IR sensor
 * 	followLineCenter: 	0=stopline		1=dist 		2=object in front
-*	follow_wall: 		0=hole in wall 	1=object on the other side
+*	follow_wall: 		0=hole in wall 	1=object on the other side     (Side: 0 left,  1 right, 2 middle (WIP))
 *
 */
 
