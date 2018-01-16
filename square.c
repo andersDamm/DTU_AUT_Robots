@@ -422,7 +422,7 @@ switch (mission.state) {
             mission.state=ms_gateOnTheLoose_SIM;
             printf("Beginning the ms %d in the sim!\n", mission.state);
         } else{
-            mission.state=ms_follow_wall;
+            mission.state=ms_wall_gate_RW;
         }
 	break;
 
@@ -455,13 +455,7 @@ switch (mission.state) {
     break;
 
     case ms_follow_wall: //Side = 0 = left   Side = 1 = right
-        if(follow_wall(0,0.20,0.3,0,mission.time)) mission.state = ms_end;
-		/* 
-		 * follow_wall(1,0.20,0.3,0,mission.time)
-		 * follow_wall(0,0.20,0.3,2,mission.time)
-		 * follow_wall(1,0.20,0.3,2,mission.time)
-		 * follow_wall(0,0.20,0.3,3,mission.time)
-		*/
+        if(follow_wall(1,0.30,0.2,3,mission.time)) mission.state = ms_end;
     break;
 
     case ms_followRightLine:
@@ -820,46 +814,54 @@ switch (mission.state) {
     
     case ms_wall_gate_RW:
         if(n==0){ //Turn the same way as the line
-            printf("Turnr1\n");
             if(turnr(0.2,90.0/180*M_PI,0.1,mission.time)){
                 mission.time =-1; n=1;
             }
         } else if(n==1){  //Follow the line through the first gate, 1=distance
-            printf("Follow line1\n");
-            if(followLineCenter(0.3, 0.2, 1, mission.time)){
+            if(followLineCenter(0.25, 0.2, 1, mission.time)){
                 mission.time =-1; n=2;
             }
         } else if(n==2){  // Turn to wall
-            printf("Turnr2\n");
             if(turnr(0.2,100.0/180*M_PI,0.1,mission.time)){
                 mission.time =-1; n=3;
             }
-        } else if(n==3){ //Follow wall till inside gate, s=0=left, cond=1
-            if(follow_wall(0, 35, 0.2, 1, mission.time)){ // Stopcon: 0 for hole in wall, 1 for object on the other side
-
+        } else if(n==3){ //Follow wall till beside gate, s=0=left, cond=1
+            if(follow_wall(0, 0.45, 0.3, 2, mission.time)){ // Stopcon: 2 for hole in wall, 3 for object on the other side - laser
                 mission.time =-1; n=4;
             } 
-        } else if(n==4){
-            if(fwd(0, 0.2, 2, mission.time)){  // Cond: 0 dist, 1 wall IR detect, 2 bl detect
-                mission.time =-1; n=5;
-            }
-        } else if(n==5){  
-            if(turnr(0.25,90.0/180*M_PI,0.3,mission.time)){
-                mission.time =-1; n=6;
-            }
+		} else if(n==4){
+			if(fwd(0.5, 0.2, 0, mission.time)){
+				mission.time = -1; n=5;
+			}
+		} else if(n==5){
+			if(turn(90.0*M_PI/180, 0.1, mission.time)){
+				mission.time = -1; n=6;
+			}
         } else if(n==6){
-            if(followLineCenter(4, 0.2, 0, mission.time)){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
+            if(fwd(0, 0.2, 2, mission.time)){  // Cond: 0 dist, 1 wall IR detect, 2 bl detect
                 mission.time =-1; n=7;
             }
-        } else if(n==7){
-            if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
+        } else if(n==7){  
+            if(turnr(0.25,100.0/180*M_PI,0.1,mission.time)){
                 mission.time =-1; n=8;
             }
         } else if(n==8){
-            if(followLineCenter(4, 0.2, 0, mission.time)){
+            if(followLineCenter(4, 0.2, 0, mission.time)){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
                 mission.time =-1; n=9;
             }
-        } else if(n>8){
+		} else if(n==9){
+			if(fwd(0.15, 0.2, 0, mission.time)){
+				mission.time =-1; n=10;
+			}
+        } else if(n==10){
+            if(turn(90.0/180*M_PI,0.2,mission.time)){
+                mission.time =-1; n=11;
+            }
+        } else if(n==11){
+            if(followLineCenter(4, 0.2, 0, mission.time)){
+                mission.time =-1; n=12;
+            }
+        } else if(n>11){
             mission.state=ms_end;
         }
     break;
@@ -1441,19 +1443,19 @@ void update_motcon(motiontype *p){
 			p->error_sum += p->error_current;
 			pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
 
-			if(p->stop_condition==0 && getDistIR(IR_dist)[0] < 0.70){                    // Stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser		
+			if(p->stop_condition==0 && getDistIR(IR_dist)[0] < 0.70){  // Stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser		
 		        p->motorspeed_l=p->speedcmd - pid;
 		        p->motorspeed_r=p->speedcmd + pid;
-			} else if(p->stop_condition==1 && (getDistIR(IR_dist)[4] > 0.20 || getDistIR(IR_dist)[4] < 0)){                     // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
+			} else if(p->stop_condition==1 && (getDistIR(IR_dist)[4] > 0.20 || getDistIR(IR_dist)[4] < 0)){  // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
 			    if(pid > p->speedcmd){                      // Speedlimit
 			        pid = p->speedcmd;
 			    }
 		        p->motorspeed_l=p->speedcmd - pid;
 		        p->motorspeed_r=p->speedcmd + pid;
-			} else if(p->stop_condition==2 && laserpar[0] < 0.70){                     // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
+			} else if(p->stop_condition==2 && (laserpar[0] < 1.5*p->dist || laserpar[0] == 0)){   // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
                 p->motorspeed_l=p->speedcmd - pid;
                 p->motorspeed_r=p->speedcmd + pid;
-            } else if(p->stop_condition==3 && laserpar[8] > 0.2){
+            } else if(p->stop_condition==3 && (laserpar[8] > 0.30 || laserpar[0] == 0)){
                 if(pid > p->speedcmd){                      // Speedlimit
                     pid = p->speedcmd;
                 }
@@ -1478,16 +1480,16 @@ void update_motcon(motiontype *p){
 		        p->motorspeed_l=p->speedcmd + pid;
 		        p->motorspeed_r=p->speedcmd - pid;
 			} 
-			else if(p->stop_condition==1 && (getDistIR(IR_dist)[0] > 0.20 || getDistIR(IR_dist)[0] < 0)){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+			else if(p->stop_condition==1 && (getDistIR(IR_dist)[0] > 0.20 || getDistIR(IR_dist)[0] < 0)){     // stopcon: 0 for hole in wall, 1 for object on the other side
 			    if(pid > p->speedcmd){                      //Speedlimit
 			        pid = p->speedcmd;
 			    }
 		        p->motorspeed_l=p->speedcmd + pid;
 		        p->motorspeed_r=p->speedcmd - pid;
-            } else if(p->stop_condition==2 && laserpar[8] < 0.70){                     // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
+            } else if(p->stop_condition==2 && (laserpar[8] < 1.5*p->dist || laserpar[0] == 0)){ // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
                 p->motorspeed_l=p->speedcmd + pid;
                 p->motorspeed_r=p->speedcmd - pid;
-            } else if(p->stop_condition==3 && laserpar[0] > 0.2){
+            } else if(p->stop_condition==3 && (laserpar[0] > 0.30 || laserpar[0] == 0)){
                 if(pid > p->speedcmd){                      // Speedlimit
                     pid = p->speedcmd;
                 }
