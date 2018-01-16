@@ -242,7 +242,7 @@ enum {	ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,
 		ms_followRightLine,ms_followLeftLine,ms_follow_wall,
 		ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end,ms_wall_gate_SIM,
 		ms_last_box_RW,ms_followWhiteLine,ms_distanceToBox,
-		ms_gateOnTheLoose, ms_last_box_SIM,ms_wall_gate_RW
+		ms_gateOnTheLoose_SIM, ms_gateOnTheLoose_RW, ms_last_box_SIM,ms_wall_gate_RW
 };
 
 int main()
@@ -347,7 +347,7 @@ if (lmssrv.connected){
   */
   rhdSync();
 
-  odo.w=0.256;
+  odo.w= 0.256+0.04169; //WHEEL_SEPARATION
   odo.cr=DELTA_M;
   odo.cl=odo.cr;
   odo.left_enc=lenc->data[0];
@@ -358,6 +358,15 @@ if (lmssrv.connected){
   running=1;
   mission.state=ms_init;
   mission.oldstate=-1;
+
+if (IS_SIMULATION){
+	odo.w = WHEEL_SEPARATION;
+} else{
+	odo.w = 0.28986;
+	odo.cr = odo.cr * 1.0048;
+	odo.cl = odo.cr;
+}
+
 
 /*
 * 	Check simulation / real world
@@ -402,23 +411,23 @@ else{
 sm_update(&mission);
 switch (mission.state) {
 	case ms_init:
-		n=0; dist=0.5;angle= -90.0/180*M_PI;
+		n=0; dist=1;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
-            mission.state=ms_last_box_SIM;
+            mission.state=ms_gateOnTheLoose_SIM;
             printf("Beginning the wall_gate in the sim!\n");
         } else{
-            mission.state=ms_last_box_RW;
+            mission.state=ms_gateOnTheLoose_RW;
         }
 	break;
 
 	case ms_fwd:  //stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
-		if (fwd(dist,0.6,0,mission.time)){  mission.state=ms_turn;} // Square min ven
+		if (fwd(dist,0.3,0,mission.time)){  mission.state=ms_turn;} // Square min ven
 	break;
 
 	case ms_turn:
 		if (turn(angle,0.3,mission.time)){
-			n=n-1;
-			if (n==0)
+			n=n+1;
+			if (n==4)
 				mission.state=ms_end;
 			else
 				mission.state=ms_fwd;
@@ -611,7 +620,7 @@ switch (mission.state) {
       }	
 	  	else if(n == 14){
 		    n=0;
-		    mission.state=ms_gateOnTheLoose;
+		    mission.state=ms_gateOnTheLoose_SIM;
 	  	}
   	break;
 
@@ -676,11 +685,11 @@ switch (mission.state) {
 	       mission.time =-1; n= 14;
 	   }
     }else if(n == 14){
-	   mission.state=ms_gateOnTheLoose;
+	   mission.state=ms_gateOnTheLoose_RW;
 	}
     break;
 
-  case ms_gateOnTheLoose:
+  case ms_gateOnTheLoose_SIM:
 		
 	  if (n == 0) {
 			//followLineCenterTwoGatePolesDetected(4, 0.3, mission.time)
@@ -711,11 +720,47 @@ switch (mission.state) {
 		  if (fwd(50,0.3, 2, mission.time)) { mission.time = -1; n = 9; } // drive straight, untill the robot finds a black line, then stop.
 	  }
 	  else if (n == 9) {
-		  mission.state = ms_wall_gate;
+		  mission.state = ms_wall_gate_SIM;
 			n=0;
 	  }
 	  break;
 	  //end of gateOnTheLoose
+
+	case ms_gateOnTheLoose_RW:
+		
+	  if (n == 0) {
+			//followLineCenterTwoGatePolesDetected(4, 0.3, mission.time)
+		  if (followLineCenter(0.75,0.2,4,mission.time)) { mission.time = -1; n = 1; }
+	  }
+	  else if (n == 1) {
+		  if (followLineCenter(0.75,0.2,1,mission.time)) { mission.time = -1; n = 2; }
+	  }
+	  else if (n == 2) {
+		  if (turn(90.0/180*M_PI,0.15,mission.time)) { mission.time = -1; n = 3; }
+	  }
+	  else if (n == 3) {
+		  if (fwd(0.15,0.2,1,mission.time)) { mission.time = -1; n = 4; }
+	  }
+	  else if (n == 4) {
+		  if (turn(-90.0/180*M_PI,0.15,mission.time)) { mission.time = -1; n = 5; }
+	  }
+	  else if (n == 5) { //Drives till bl
+		  if (fwd(0.15, 0.2,2, mission.time)) { mission.time = -1; n = 9; }
+	  }
+	  else if (n == 6) {
+		  if (turn(90.0 / 180 * M_PI, 0.3, mission.time)) { mission.time = -1; n = 7; }
+	  }
+	  else if (n == 7) {
+		  if (follow_wall(0, 15, 0.3,0, mission.time)) { mission.time = -1; n = 8; } // follow the wall untill the robot drives parallel to the wall. Then in the next step use odometry to drive straight into the black line ahead.
+	  }
+	  else if (n == 8) {
+		  if (fwd(50,0.3, 2, mission.time)) { mission.time = -1; n = 9; } // drive straight, untill the robot finds a black line, then stop.
+	  }
+	  else if (n == 9) {
+		  mission.state = ms_wall_gate_RW;
+			n=0;
+	  }
+	  break;
 
     case ms_wall_gate_SIM:
         if(n==0){ //Turn the same way as the line
@@ -807,7 +852,7 @@ switch (mission.state) {
     break;
 
   case ms_last_box_RW:	
-
+	printf("right IR sensor = %f\n",getDistIR(IR_dist)[4]);
   	if(n==0){	//follow black line until walldetection 2
   		if(followLineCenter(0.2, 0.1,2, mission.time)){
   			mission.time = -1;
@@ -821,14 +866,14 @@ switch (mission.state) {
 		}
 
 	}
-	else if(n==2){
-		if(fwd(0.70,0.2,3,mission.time)){
+	else if(n==2){	//drive until right IR sensor detects more than 0.7m
+		if(fwd(0.70,0.2,4,mission.time)){
 			mission.time = -1;
 			n++;
 		}
 	}
-	else if(n==3){
-		if(fwd(0.40,0.2,0,mission.time)){
+	else if(n==3){	
+		if(fwd(0.55,0.2,0,mission.time)){
 			mission.time = -1;
 			n++;
 		}
@@ -840,7 +885,7 @@ switch (mission.state) {
 		}
 	}
 	else if(n==5){
-		if(fwd(0.4,0.2,0,mission.time)){
+		if(fwd(0.40,0.2,0,mission.time)){
 			mission.time = -1;
 			n++;
 		}
@@ -852,7 +897,7 @@ switch (mission.state) {
 		}
 	}
 	else if(n==7){
-		if(fwd(0.35,0.2,0,mission.time)){
+		if(fwd(0.5,0.2,0,mission.time)){
 			mission.time = -1;
 			n++;
 		}
@@ -1200,6 +1245,10 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l=p->speedcmd;
 				p->motorspeed_r=p->speedcmd;
 			}
+			else if(p->stop_condition==4 && (laserpar[8] < p->dist || (laserpar[8] == 0.0))){
+				p->motorspeed_l=p->speedcmd;
+				p->motorspeed_r=p->speedcmd;
+			}
 			else{
 				p->finished=1;
 				p->motorspeed_l=0;
@@ -1320,9 +1369,6 @@ void update_motcon(motiontype *p){
 			p->error_old = p->error_current;
 			//p->error_current = centerOfGravity(0)-3.5;
 			p->error_current = minIntensity()-3.5;
-			} else {
-			    p->error_current = minIntensity()-3.5;
-			}
 			p->error_sum += p->error_current;
 			pid = KP_FOR_FOLLOWLINE*p->error_current+KI_FOR_FOLLOWLINE*p->error_sum+KD_FOR_FOLLOWLINE*(p->error_current-p->error_old);
 			if(	p->stop_condition==0 && !stopLine()){
@@ -1591,7 +1637,6 @@ int fwd(double dist, double speed, int condition,int time){
 		mot.cmd=mot_move;
 		mot.speedcmd=speed;
 		mot.dist=dist;
-        odo.theta_ref=odo.theta; 
         mot.stop_condition = condition;
 		return 0;
 	}
@@ -1624,22 +1669,27 @@ int turnr(double radius, double angle, double speed, int time){
 }
 int followLineCenter(double dist, double speed,int condition, int time){   // linesensor input???
   if(time == 0){
-   mot.cmd = mot_followLineCenter;
-   mot.speedcmd = speed;
-   mot.dist = dist;
-   mot.stop_condition = condition;
-   return 0;
- }
- else return mot.finished;
+    mot.cmd = mot_followLineCenter;
+    mot.speedcmd = speed;
+    mot.dist = dist;
+    mot.stop_condition = condition;
+    return 0;
+    } else { 
+		odo.theta_ref=odo.theta; 
+		return mot.finished;
+	}
 }
 int followWhiteLine(double dist, double speed, int time){   // linesensor input???
-  if(time == 0){
-   mot.cmd = mot_followWhiteLine;
-   mot.speedcmd = speed;
-   mot.dist = dist;
-   return 0;
- }
- else return mot.finished;
+	if(time == 0){
+		mot.cmd = mot_followWhiteLine;
+		mot.speedcmd = speed;
+		mot.dist = dist;
+		return 0;
+	}
+	else {
+        odo.theta_ref=odo.theta; 
+		return mot.finished;
+}
 }
 int follow_wall(int side, double dist, double speed, int condition, int time){  //Side = 0 = left   Side = 1 = right   Side = 2 = between!!, min ven
   if(time == 0){
@@ -1656,8 +1706,10 @@ int follow_wall(int side, double dist, double speed, int condition, int time){  
     mot.stop_condition = condition;                 // Cond: 0 for hole in wall, 1 for object on opposite side
 	return 0;
   }
-  else
+  else{
+	odo.theta_ref=odo.theta;
 	return mot.finished;
+	}
 }
 int followRightLine(double dist, double speed, int time){   // linesensor input???
   if(time == 0){
@@ -1666,17 +1718,22 @@ int followRightLine(double dist, double speed, int time){   // linesensor input?
 	 mot.dist = dist;
 	 return 0;
  }
- else return mot.finished;
+ else{ 
+	odo.theta_ref=odo.theta;
+	return mot.finished;
+	}
 }
 
 int followLeftLine(double dist, double speed, int time){   // linesensor input???
-  if(time == 0){
-	 mot.cmd = mot_followLeftLine;
-	 mot.speedcmd = speed;
-	 mot.dist = dist;
-	 return 0;
- }
- else return mot.finished;
+	if(time == 0){
+		mot.cmd = mot_followLeftLine;
+		mot.speedcmd = speed;
+		mot.dist = dist;
+		return 0;
+	} else { 
+	odo.theta_ref=odo.theta;
+	return mot.finished;
+	}
 }
 
 void sm_update(smtype *p){
@@ -1906,9 +1963,12 @@ int followLineCenterTwoGatePolesDetected(double dist, double speed, int time) {
 		mot.speedcmd = speed;
 		mot.dist = dist;
 		return 0;
+	} else {
+	odo.theta_ref=odo.theta;
+	return mot.finished;
 	}
-	else return mot.finished;
 }
+
 int reverseTillBlackLine(double dist, double speed, int time) {
 	if (time == 0) {
 		mot.cmd = mot_reverseTillBlackLine;
@@ -1916,16 +1976,21 @@ int reverseTillBlackLine(double dist, double speed, int time) {
 		mot.dist = dist;
 		return 0;
 	}
-	else return mot.finished;
+	else {
+		odo.theta_ref=odo.theta;
+		return mot.finished;
+	}
 }
+
 int turnTowardsCenterOfGate(double speed, int time) {
 	if (time == 0) {
 		mot.cmd = mot_turnTowardsCenterOfGate;
 		mot.speedcmd = speed;
 		return 0;
-	}
-	else
+	} else {
+		odo.theta_ref=odo.theta;
 		return mot.finished;
+	}
 }
 int driveTowardsCenterOfGate(double speed, int time) {
 	if (time == 0) {
