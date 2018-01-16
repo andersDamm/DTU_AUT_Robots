@@ -240,9 +240,9 @@ motiontype mot;
 
 enum {	ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,
 		ms_followRightLine,ms_followLeftLine,ms_follow_wall,
-		ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end,ms_wall_gate,
+		ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end,ms_wall_gate_SIM,
 		ms_last_box_RW,ms_followWhiteLine,ms_distanceToBox,
-		ms_gateOnTheLoose, ms_last_box_SIM
+		ms_gateOnTheLoose, ms_last_box_SIM,ms_wall_gate_RW
 };
 
 int main()
@@ -717,7 +717,7 @@ switch (mission.state) {
 	  break;
 	  //end of gateOnTheLoose
 
-    case ms_wall_gate:
+    case ms_wall_gate_SIM:
         if(n==0){ //Turn the same way as the line
             if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
                 mission.time =-1; n=1;
@@ -758,8 +758,52 @@ switch (mission.state) {
             mission.state=ms_followWhiteLine;
 			n=0;
         }
+    break;
+    
+    case ms_wall_gate_RW:
+        if(n==0){ //Turn the same way as the line
+            printf("Turnr1\n");
+            if(turnr(0.2,90.0/180*M_PI,0.1,mission.time)){
+                mission.time =-1; n=1;
+            }
+        } else if(n==1){  //Follow the line through the first gate, 1=distance
+            printf("Follow line1\n");
+            if(followLineCenter(0.3, 0.2, 1, mission.time)){
+                mission.time =-1; n=2;
+            }
+        } else if(n==2){  // Turn to wall
+            printf("Turnr2\n");
+            if(turnr(0.2,100.0/180*M_PI,0.3,mission.time)){
+                mission.time =-1; n=3;
+            }
+        } else if(n==3){ //Follow wall till inside gate, s=0=left, cond=1
+            if(follow_wall(0, 35, 0.2, 1, mission.time)){ // Stopcon: 0 for hole in wall, 1 for object on the other side
 
-
+                mission.time =-1; n=4;
+            } 
+        } else if(n==4){
+            if(fwd(0, 0.2, 2, mission.time)){  // Cond: 0 dist, 1 wall IR detect, 2 bl detect
+                mission.time =-1; n=5;
+            }
+        } else if(n==5){  
+            if(turnr(0.25,90.0/180*M_PI,0.3,mission.time)){
+                mission.time =-1; n=6;
+            }
+        } else if(n==6){
+            if(followLineCenter(4, 0.2, 0, mission.time)){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
+                mission.time =-1; n=7;
+            }
+        } else if(n==7){
+            if(turnr(0.2,90.0/180*M_PI,0.3,mission.time)){
+                mission.time =-1; n=8;
+            }
+        } else if(n==8){
+            if(followLineCenter(4, 0.2, 0, mission.time)){
+                mission.time =-1; n=9;
+            }
+        } else if(n>8){
+            mission.state=ms_end;
+        }
     break;
 
   case ms_last_box_RW:	
@@ -1276,6 +1320,9 @@ void update_motcon(motiontype *p){
 			p->error_old = p->error_current;
 			//p->error_current = centerOfGravity(0)-3.5;
 			p->error_current = minIntensity()-3.5;
+			} else {
+			    p->error_current = minIntensity()-3.5;
+			}
 			p->error_sum += p->error_current;
 			pid = KP_FOR_FOLLOWLINE*p->error_current+KI_FOR_FOLLOWLINE*p->error_sum+KD_FOR_FOLLOWLINE*(p->error_current-p->error_old);
 			if(	p->stop_condition==0 && !stopLine()){
