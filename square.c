@@ -160,7 +160,7 @@ typedef struct{//input
 enum {
 	mot_stop=1,mot_move,mot_turn, mot_turnr,mot_followLineCenter,
 	mot_followRightLine,mot_followLeftLine,mot_follow_wall_left,
-	mot_follow_wall_right, mot_follow_wall_between, mot_reverse,
+	mot_follow_wall_right, mot_reverse,
 	mot_detect_line,mot_followWhiteLine,
 	mot_followLineCenterTwoGatePolesDetected,
 	mot_reverseTillBlackLine, mot_driveTowardsCenterOfGate,
@@ -420,9 +420,9 @@ switch (mission.state) {
 		n=0; dist=1;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
             mission.state=ms_gateOnTheLoose_SIM;
-            printf("Beginning the wall_gate in the sim!\n");
+            printf("Beginning the ms %d in the sim!\n", mission.state);
         } else{
-            mission.state=ms_gateOnTheLoose_RW;
+            mission.state=ms_follow_wall;
         }
 	break;
 
@@ -454,9 +454,16 @@ switch (mission.state) {
 		if (followLineCenter(dist,0.1,0,mission.time)) mission.state = ms_end; 
     break;
 
-    case ms_follow_wall: //Side = 0 = left   Side = 1 = right   Side = 2 = middle
-        if(follow_wall(2,20,-0.3,0,mission.time)) mission.state = ms_end;
+    case ms_follow_wall: //Side = 0 = left   Side = 1 = right
+        if(follow_wall(0,0.20,0.3,0,mission.time)) mission.state = ms_end;
+		/* 
+		 * follow_wall(1,0.20,0.3,0,mission.time)
+		 * follow_wall(0,0.20,0.3,2,mission.time)
+		 * follow_wall(1,0.20,0.3,2,mission.time)
+		 * follow_wall(0,0.20,0.3,3,mission.time)
+		*/
     break;
+
     case ms_followRightLine:
         if (followRightLine(2,0.3,mission.time)) mission.state = ms_followLineCenter;
     break;
@@ -1173,10 +1180,6 @@ void update_motcon(motiontype *p){
 			case mot_followLeftLine:
 			    p->curcmd=mot_followLeftLine;
 			    p->startpos=(p->left_pos+p->right_pos)/2;
-			break;
-
-			case mot_follow_wall_between:
-			    p->curcmd=mot_follow_wall_between;
 			break;
 
 			case mot_driveTowardsCenterOfGate:
