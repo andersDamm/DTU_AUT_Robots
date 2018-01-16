@@ -102,9 +102,15 @@ getoutputref (const char *sym_name, symTableElement * tab)
 * 	fwd: 				0=stop by dist	1=stop by wall detection	
 *						2=stop by line black line detection		3=stop by right IR sensor
 * 	followLineCenter: 	0=stopline		1=dist 		2=object in front(ir)	3=object in front (laser)	4=object to the left
-*	follow_wall: 		0=hole in wall 	1=object on the other side
+*	follow_wall: 		0=hole in wall 	1=object on the other side, 2 for 0 but laser, 3 for 1 but laser
 *
 */
+/* DB_OtherCond
+*  int follow_wall(int side, double dist, double speed, int condition, int time);  Side: 0 is left, 1 is right
+*
+*
+*/
+
 
 
 
@@ -818,7 +824,7 @@ switch (mission.state) {
             }
         } else if(n==2){  // Turn to wall
             printf("Turnr2\n");
-            if(turnr(0.2,100.0/180*M_PI,0.3,mission.time)){
+            if(turnr(0.2,100.0/180*M_PI,0.1,mission.time)){
                 mission.time =-1; n=3;
             }
         } else if(n==3){ //Follow wall till inside gate, s=0=left, cond=1
@@ -1427,108 +1433,69 @@ void update_motcon(motiontype *p){
 
 		case mot_follow_wall_left:                      // 0 is the leftmost IR sensor
 			p->error_old = p->error_current;
-			p->error_current = getDistIR(IR_dist)[0] - p->dist;
+            if (p->stop_condition < 2){ p->error_current = getDistIR(IR_dist)[0] - p->dist; 
+                } else { p->error_current = laserpar[0] - p->dist;}
 			p->error_sum += p->error_current;
 			pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
-			if(p->stop_condition==0){                    // Stopcon: 0 for hole in wall, 1 for object on the other side			
-				if(getDistIR(IR_dist)[0] < 0.70){
-			        p->motorspeed_l=p->speedcmd - pid;
-			        p->motorspeed_r=p->speedcmd + pid;
-			    }
-			    else{
-			        p->motorspeed_l = 0;
-			        p->motorspeed_r = 0;
-			        p->finished = 1;
-			    }
-			} 
-			if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+
+			if(p->stop_condition==0 && getDistIR(IR_dist)[0] < 0.70){                    // Stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser		
+		        p->motorspeed_l=p->speedcmd - pid;
+		        p->motorspeed_r=p->speedcmd + pid;
+			} else if(p->stop_condition==1 && (getDistIR(IR_dist)[4] > 0.20 || getDistIR(IR_dist)[4] < 0)){                     // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
 			    if(pid > p->speedcmd){                      // Speedlimit
 			        pid = p->speedcmd;
 			    }
-		        if(getDistIR(IR_dist)[4] > 0.20 || getDistIR(IR_dist)[4] < 0){
-			        p->motorspeed_l=p->speedcmd - pid;
-			        p->motorspeed_r=p->speedcmd + pid;
-			    }
-			    else{
-			        p->motorspeed_l = 0;
-			        p->motorspeed_r = 0;
-			        p->finished = 1;
-			    }
-			} 
-			else{
-			        p->motorspeed_l = 0;
-			        p->motorspeed_r = 0;
-			        p->finished = 1;
-			}
+		        p->motorspeed_l=p->speedcmd - pid;
+		        p->motorspeed_r=p->speedcmd + pid;
+			} else if(p->stop_condition==2 && laserpar[0] < 0.70){                     // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
+                p->motorspeed_l=p->speedcmd - pid;
+                p->motorspeed_r=p->speedcmd + pid;
+            } else if(p->stop_condition==3 && laserpar[8] > 0.2){
+                if(pid > p->speedcmd){                      // Speedlimit
+                    pid = p->speedcmd;
+                }
+                p->motorspeed_l=p->speedcmd - pid;
+                p->motorspeed_r=p->speedcmd + pid;
+            } else{
+                p->motorspeed_l = 0;
+                p->motorspeed_r = 0;
+                p->finished = 1;
+            }
 		break;
 
-		//follows wall using the right IR sensor until no wall is detected anymore
+		//follows wall using the right IR sensor or laser until no wall is detected anymore
 		case mot_follow_wall_right:   
 			p->error_old = p->error_current;
-			p->error_current = getDistIR(IR_dist)[4] - p->dist;
+            if (p->stop_condition < 2){ p->error_current = getDistIR(IR_dist)[4] - p->dist;
+                } else { p->error_current = laserpar[8] - p->dist;}
 			p->error_sum += p->error_current;
 			pid = KP_FOR_FOLLOWWALL*p->error_current+KI_FOR_FOLLOWWALL*p->error_sum+KD_FOR_FOLLOWWALL*(p->error_current-p->error_old);
-			if(p->stop_condition==0){                     // stopcon: 0 for hole in wall, 1 for object on the other side
-			    if(getDistIR(IR_dist)[4] < 0.70){
-					printf("Mission.time = %d\n",mission.time);
-			        p->motorspeed_l=p->speedcmd - pid;
-			        p->motorspeed_r=p->speedcmd + pid;
-			    }
-			    else{
-					printf("Mission.time[finished] = %d\n",mission.time);
-			    	p->motorspeed_l = 0;
-			    	p->motorspeed_r = 0;
-			    	p->finished = 1;
-			    }
+
+			if(p->stop_condition==0 && getDistIR(IR_dist)[4] < 0.70){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+		        p->motorspeed_l=p->speedcmd + pid;
+		        p->motorspeed_r=p->speedcmd - pid;
 			} 
-			else if(p->stop_condition==1){                     // stopcon: 0 for hole in wall, 1 for object on the other side
+			else if(p->stop_condition==1 && (getDistIR(IR_dist)[0] > 0.20 || getDistIR(IR_dist)[0] < 0)){                     // stopcon: 0 for hole in wall, 1 for object on the other side
 			    if(pid > p->speedcmd){                      //Speedlimit
 			        pid = p->speedcmd;
 			    }
-		        if(getDistIR(IR_dist)[0] > 0.20 || getDistIR(IR_dist)[0] < 0){
-			        p->motorspeed_l=p->speedcmd - pid;
-			        p->motorspeed_r=p->speedcmd + pid;
-			    }
-			    else{
-			        p->motorspeed_l = 0;
-			        p->motorspeed_r = 0;
-			        p->finished = 1;
-			    }
+		        p->motorspeed_l=p->speedcmd + pid;
+		        p->motorspeed_r=p->speedcmd - pid;
+            } else if(p->stop_condition==2 && laserpar[8] < 0.70){                     // stopcon: 0 for hole in wall, 1 for object on the other side, 2 for 0 but laser
+                p->motorspeed_l=p->speedcmd + pid;
+                p->motorspeed_r=p->speedcmd - pid;
+            } else if(p->stop_condition==3 && laserpar[0] > 0.2){
+                if(pid > p->speedcmd){                      // Speedlimit
+                    pid = p->speedcmd;
+                }
+                p->motorspeed_l=p->speedcmd + pid;
+                p->motorspeed_r=p->speedcmd - pid;
 			} else{
 			        p->motorspeed_l = 0;
 			        p->motorspeed_r = 0;
 			        p->finished = 1;
 			}
 		break;
-
-		case mot_follow_wall_between:
-			if(getDistIR(IR_dist)[0] < 0.70 && getDistIR(IR_dist)[4] < 0.70 && p->speedcmd > 0){
-				p->motorspeed_l = p->speedcmd - (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-				p->motorspeed_r = p->speedcmd + (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-			} 
-			else if (getDistIR(IR_dist)[0] < 0.70 && getDistIR(IR_dist)[4] < 0.70 && p->speedcmd < 0){
-				if (getDistIR(IR_dist)[0] < getDistIR(IR_dist)[4] &&
-				 (odo.theta - odo.theta_ref) <  0.52){ //Left closest //0.52 rad ~= 30deg
-					p->motorspeed_l = p->speedcmd - (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-					p->motorspeed_r = p->speedcmd + (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-				} 
-				else if (getDistIR(IR_dist)[0] > getDistIR(IR_dist)[4] &&
-				   (odo.theta - odo.theta_ref) > -0.52){ //right closest //0.52 rad ~= 30deg
-					p->motorspeed_l = p->speedcmd - (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-					p->motorspeed_r = p->speedcmd + (KP_FOR_FOLLOWWALL) * (getDistIR(IR_dist)[0] - getDistIR(IR_dist)[4]);
-				} 
-				else {
-					p->motorspeed_l = p->speedcmd;
-					p->motorspeed_r = p->speedcmd;
-				}
-			} 
-			else{
-				p->motorspeed_l = 0;
-				p->motorspeed_r = 0;
-				p->finished = 1;
-			}
-			break;
-		//printf("IR2: %f \ttheta_ref: %f \ttheta: %f\n",getDistIR(IR_dist)[2],odo.theta_ref, odo.theta);
 
 		//follows black line on the left side until a stop line is detected
 		//must not be used with stopLine() as stopcondition
@@ -1691,7 +1658,7 @@ int followWhiteLine(double dist, double speed, int time){   // linesensor input?
 		return mot.finished;
 }
 }
-int follow_wall(int side, double dist, double speed, int condition, int time){  //Side = 0 = left   Side = 1 = right   Side = 2 = between!!, min ven
+int follow_wall(int side, double dist, double speed, int condition, int time){  //Side = 0 = left   Side = 1 = right
   if(time == 0){
 	mot.speedcmd = speed;
 	mot.dist = dist;
@@ -1699,9 +1666,6 @@ int follow_wall(int side, double dist, double speed, int condition, int time){  
 	  mot.cmd = mot_follow_wall_left;
 	} else if (side == 1){
 	  mot.cmd = mot_follow_wall_right;
-	} else if (side == 2){
-	  odo.theta_ref = odo.theta;
-	  mot.cmd = mot_follow_wall_between;
 	}
     mot.stop_condition = condition;                 // Cond: 0 for hole in wall, 1 for object on opposite side
 	return 0;
