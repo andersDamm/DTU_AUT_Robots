@@ -1180,12 +1180,6 @@ void update_motcon(motiontype *p){
 				p->curcmd=mot_stop;
 			break;
 
-			case mot_drivePastBox:
-				p->curcmd = p->mot_drivePastBox;
-				break;
-
-
-
 			case mot_move:
 			    p->startpos=(p->left_pos+p->right_pos)/2;
 			    if(p->speedcmd < 0){
@@ -1262,35 +1256,6 @@ void update_motcon(motiontype *p){
 			p->motorspeed_l=0;
 			p->motorspeed_r=0;
 		break;
-		
-		case mot_drivePastBox:
-			d = ((p->motorspeed_l + p->motorspeed_r) / 2)*((p->motorspeed_l + p->motorspeed_r) / 2) / (2 * (AJAX));
-			if (laserpar[8] > START_POS_TO_BOX_MAX_DIST && laserOld8 < START_POS_TO_BOX_MAX_DIST && laserOld8 != 0) {//Hits outer edge of box
-				p->finished = 1;
-				p->motorspeed_l = 0;
-				p->motorspeed_r = 0;
-				laserOld8 = 0;
-			}
-			else if(laserpar[8] < START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 > START_POS_TO_BOX_MAX_DIST)//Hits first edge of box
-			{
-				p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-				p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-				if (drivePastBoxCounter == LASER8VALUES - 1) drivePastBoxCounter = 0;
-			}
-			else if (laserpar[8] > START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 > START_POS_TO_BOX_MAX_DIST) {//Both are before the edge
-				p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-				p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-			}
-			else if () {//at the box.
-				p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-				p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-				if (drivePastBoxCounter == LASER8VALUES - 1) drivePastBoxCounter = 0;
-				laser8Values[drivePastBoxCounter] = laserpar[8];
-				drivePastBoxCounter++;
-			}
-			laserOld8 = laserpar[8];
-			break;
-
 
 		//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
 		case mot_move:
@@ -1345,7 +1310,7 @@ void update_motcon(motiontype *p){
 				p->motorspeed_l=p->speedcmd;
 				p->motorspeed_r=p->speedcmd;
 			}
-			else if (p->stop_condition == 5) {
+			else if (p->stop_condition==5) {
 				if (laserpar[8] > START_POS_TO_BOX_MAX_DIST && laserOld8 < START_POS_TO_BOX_MAX_DIST && laserOld8 != 0) {//Hits outer edge of box
 					p->finished = 1;
 					p->motorspeed_l = 0;
@@ -1725,12 +1690,7 @@ int fwd(double dist, double speed, int condition,int time){
 	else
 		return mot.finished;
 }
-int drivePastBox(double speed, int time) {
-	if (time == 0) {
-		mot.cmd = mot_drivePastBox;
 
-	}
-}
 int turn(double angle, double speed,int time){
  	if (time==0){
 		mot.cmd=mot_turn;
