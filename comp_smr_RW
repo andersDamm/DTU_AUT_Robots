@@ -1,19 +1,25 @@
-n=0
-%goto "tjek"
-%goto "walldebug"
-
+%17-01-2018 V1.2
 
 %Distance measurement - Task 1
-k=0.75
+
+k=0.195 %Shitty hack
 ignoreobstacles
-followline "br"@v 0.3 :($drivendist > 1)
-followline "bm"@v 0.3 :($irdistfrontmiddle <= 0.30)
+%followline "br"@v 0.3 :($drivendist > 1)
+%followline "bm"@v 0.3 :($irdistfrontmiddle <= 0.30)
+followline "br"@v 0.3 :($irdistfrontmiddle <= 0.30)
 stop
 q =$irdistfrontmiddle
 
-eval $odox+q+k
-fwd -0.3
+%Distance to box is:
 
+eval ($odoy-q-k)*(-1)
+d = ($odoy-q-k)*(-1)
+%other distances:
+eval $odoy
+eval q
+if(d <= 2.05) "nextPart"
+fwd -0.3 @v 0.25
+label "nextPart"
 %Box gate - Task 2
 turn 90
 drive @v 0.3 :($crossingblackline)
@@ -46,47 +52,42 @@ followline "bm":($crossingblackline)
 fwd 0.3
 
 %Find gate - Task 3
-n=0
-label "tjek"
-followline "bm" @v 0.08 : ($irdistleft < 0.70)
-n=n+1
-fwd 0.1
-if(n < 2) "tjek"
-fwd -0.15 @v 0.2
+followline "bm" @v 0.1 : ($irdistleft < 0.60)
+fwd 0.55
 turn 90
-fwd 0.64
-drive @v 0.3 :  ($irdistfrontmiddle <=0.20)
+ignoreobstacles
+fwd 0.5
+drive @v 0.3 :  ($irdistfrontmiddle <=0.30)
 stop
-turn -90
-drive @v 0.2 :($crossingblackline)
-fwd 0.15
+turn -100 @v 0.2
+drive @v 0.2 : ($crossingblackline)
+fwd 0.2
 turn 90
 
 
 %Wall - Task 4
-label "walldebug"
 followline "bm"@v 0.3 :($irdistleft < 0.70)
-fwd 0.6
+fwd 0.7
 turn 90
 fwd 0.175
-followwall "l"0.15 :($irdistleft >= 0.40)
+followwall "l"0.2 :($irdistleft >= 0.40)
 stop
-fwd 0.35
+fwd 0.40
 turn 90
-fwd 0.5
+fwd 0.65
 turn 90
 fwd 0.4
-followwall "l"0.15 :($irdistleft >= 0.40)
+followwall "l"0.2 :($irdistleft >= 0.40)
 stop
-fwd 0.30
-turn 90
+fwd 0.3
+turn 90 @v 0.2
 followline "bm" @v 0.3 :($crossingblackline)
 fwd 0.5
 turn 90
 
 
 %White line - Task 5
-followline "wm" : ($drivendist > 2.7)
+followline "wm" @v 0.2 : ($drivendist > 2.7)
 stop
 fwd 0.5
 stop
@@ -95,19 +96,20 @@ stop
 
 %Goal  - Task 6
 ignoreobstacles
-followline "bm":($irdistfrontmiddle <= 0.15)
+followline "bm":($irdistfrontmiddle <= 0.25)
 stop
 turn 90
-followwall "r"0.10 :($irdistright >= 0.40)
-fwd 0.35
+followwall "r"0.25 :($irdistright >= 0.40)
+followwall "r"0.25 :($irdistright >= 0.40)
+fwd 0.39
 turn -80
-fwd 0.15
+fwd 0.2
 turn -110
 ignoreobstacles
 fwd 0.7
 stop
-turn 90
+turn 115
 ignoreobstacles
-followline "bm"@v 0.3 :($irdistfrontmiddle <=0.15)
+followline "bm"@v 0.3 :($irdistfrontmiddle <=0.25)
 stop
 stop
