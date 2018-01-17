@@ -65,7 +65,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 * odometry
 */
 
-#define IS_SIMULATION 1 //1=simulation, 0=real world
+#define IS_SIMULATION 0 //1=simulation, 0=real world
 
 #if IS_SIMULATION==1
     #define WHEEL_SEPARATION 0.267	/* m 0.252 */
@@ -107,11 +107,11 @@ getoutputref (const char *sym_name, symTableElement * tab)
 //end gateOnTheLoose Definitions
 
 //Dist to first box sntants and variables:
-#define START_POS_TO_BOX_MAX_DIST 2.5
-#define LASER8VALUES 100
+#define START_POS_TO_BOX_MAX_DIST 2.0   
+#define LASER8VALUES 60
 int laserOld8;
 double laser8Values[LASER8VALUES];
-int drivePastBoxCounter;
+int drivePastBoxCounter = 0;
 double meanLaser8;
 //end, Dist to first box sntants and variables:
 
@@ -274,8 +274,8 @@ int main()
 {
   poseTimeLog_t poseTimeLog_a[SIZE_OF_ARRAY];
   int counter = 0;
-  int running,n=0,arg,time=0,laser8sum;
-  double dist=0,angle=0;
+  int running,n=0,arg,time=0;
+  double dist=0,angle=0,laser8sum;
   double x,x_ref=0,distance_Box = 0; // Variables used for "distance to box"
   FILE *distance_f;
   double IR_dist[5];
@@ -436,10 +436,10 @@ switch (mission.state) {
 	case ms_init:
 		n=0; dist=1;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
-            mission.state=ms_distanceToBox_SIM;
+            mission.state=ms_DistBoxL;
             printf("Beginning the ms %d in the sim!\n", mission.state);
         } else{
-            mission.state=ms_distanceToBox_RW;
+            mission.state=ms_DistBoxL;
         }
 	break;
 
@@ -477,7 +477,7 @@ switch (mission.state) {
 
     case ms_followRightLine:
         if (followRightLine(2,0.3,mission.time)) mission.state = ms_followLineCenter;
-    break;
+    break; 
 
 	case ms_followLeftLine:
 		if (followLeftLine(2,0.3,mission.time)) mission.state = ms_end;
@@ -505,8 +505,10 @@ switch (mission.state) {
 		}
 		else if (n==2){
 			laser8sum = 0;
-			for (i = LASER8VALUES - 1; i >= 0; i--) {laser8sum += laser8Values[i];}
-			distance_Box = laser8sum/(LASER8VALUES);
+			for (i = LASER8VALUES - 1; i >= 5; i--) {laser8sum += laser8Values[i];}
+			printf("laser8sum = %f\n",laser8sum);
+			printf("LASER8VALUES = %d\n",LASER8VALUES);
+			distance_Box = laser8sum/(LASER8VALUES-5);
 			distance_f = fopen("Distance_to_box", "w");
 			fprintf(distance_f, "x-distance is: %f \n", distance_Box);
 			fclose(distance_f);
@@ -526,64 +528,62 @@ switch (mission.state) {
 			if (followLineCenter(0.5, 0.3, 0, mission.time)) { mission.time = -1; n = 7; }
 		}
 		else if (n == 7) {
-			if (followLineCenter(0.5, 0.3, 1, mission.time)) { mission.time = -1; n = 8; }
-		}
-		else if (n == 8) {
-			mission.time = ms_PushNDrive_RW;
+		    mission.time = -1; n = 0;
+			mission.state = ms_PushNDrive_RW;
 		}
 		break;
 
     case ms_distanceToBox_RW:
-    if(n==0){
-      if(followRightLine(1.7,0.3,mission.time)){
-	mission.time=-1; n=1;
-      }
-    }
-    else if(n==1){
-      x=odo.x_pos + getDistIR(IR_dist)[2]+ LENGTH_OF_ROBOT;  // Calibrate odo sim
-      distance_Box = x-x_ref;
-      mission.time=-1; n=2;
-      distance_f = fopen("Distance_to_box","w");
-      fprintf(distance_f,"x-distance is: %f \n",distance_Box);
-      fclose(distance_f);
-		n=2;
-		printf("\ndistance = %f\n\n",distance_Box);
-      }
-    else if(n==2){
-      if(turn(90.0/180*M_PI,0.3,mission.time)){
-      mission.time=-1; n=3;
-      }
-    }
-    else if(n==3){	//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
-      if(fwd(0,0.3,2,mission.time)){
-	mission.time=-1;n=4;
-      }
-    }
-    else if(n==4){
-      if(fwd(0.3,0.4,0,mission.time)){
-	mission.time=-1;n=5;
-      }
-    }
-    else if(n==5){
-      if(fwd(0,0.4,2,mission.time)){
-	mission.time=-1; n= 6;
-      }
-    }
-    else if(n==6){
-      if(fwd(0.2,0.4,0,mission.time)){
-	mission.time=-1; n= 7;
-      }
-    }
-    else if(n==7){
-      if(turn(-90.0/180*M_PI,0.3,mission.time)){
-	  mission.time =-1; n=8;
-      }
-    }
-    else if(n==8){
-      n=0; mission.time=-1;
-        mission.state=ms_PushNDrive_RW;      
-    }
-    break;
+        if(n==0){
+          if(followRightLine(1.7,0.3,mission.time)){
+	    mission.time=-1; n=1;
+          }
+        }
+        else if(n==1){
+          x=odo.x_pos + getDistIR(IR_dist)[2]+ LENGTH_OF_ROBOT;  // Calibrate odo sim
+          distance_Box = x-x_ref;
+          mission.time=-1; n=2;
+          distance_f = fopen("Distance_to_box","w");
+          fprintf(distance_f,"x-distance is: %f \n",distance_Box);
+          fclose(distance_f);
+		    n=2;
+		    printf("\ndistance = %f\n\n",distance_Box);
+          }
+        else if(n==2){
+          if(turn(90.0/180*M_PI,0.3,mission.time)){
+          mission.time=-1; n=3;
+          }
+        }
+        else if(n==3){	//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
+          if(fwd(0,0.3,2,mission.time)){
+	    mission.time=-1;n=4;
+          }
+        }
+        else if(n==4){
+          if(fwd(0.3,0.4,0,mission.time)){
+	    mission.time=-1;n=5;
+          }
+        }
+        else if(n==5){
+          if(fwd(0,0.4,2,mission.time)){
+	    mission.time=-1; n= 6;
+          }
+        }
+        else if(n==6){
+          if(fwd(0.2,0.4,0,mission.time)){
+	    mission.time=-1; n= 7;
+          }
+        }
+        else if(n==7){
+          if(turn(-90.0/180*M_PI,0.3,mission.time)){
+	      mission.time =-1; n=8;
+          }
+        }
+        else if(n==8){
+          n=0; mission.time=-1;
+            mission.state=ms_PushNDrive_RW;      
+        }
+        break;
 
     
     case ms_distanceToBox_SIM:
@@ -1439,11 +1439,12 @@ void update_motcon(motiontype *p){
 				else if (laserpar[8] < START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 < START_POS_TO_BOX_MAX_DIST && laserOld8 != 0) {//at the box.
 					p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 					p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-					if (drivePastBoxCounter == LASER8VALUES - 1) drivePastBoxCounter = 0;
+					if (drivePastBoxCounter == LASER8VALUES - 1) {drivePastBoxCounter = 0;}
 					laser8Values[drivePastBoxCounter] = laserpar[8];
 					drivePastBoxCounter++;
 				}
 				laserOld8 = laserpar[8];
+				printf("laserpar8 = %f\n", laserpar[8]);
 			}
 			else{
 				p->finished=1;
