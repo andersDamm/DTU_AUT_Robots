@@ -1,8 +1,14 @@
+<<<<<<< HEAD
 %17-01-2018 V1.2
 
 %Distance measurement - Task 1
 
 k=0.195 %Shitty hack
+=======
+%Distance measurement - Task 1
+
+k=0.2 %Shitty hack
+>>>>>>> c96e644b83dc4966f2079ddc9d9d226744c34d5e
 ignoreobstacles
 %followline "br"@v 0.3 :($drivendist > 1)
 %followline "bm"@v 0.3 :($irdistfrontmiddle <= 0.30)
@@ -11,6 +17,13 @@ stop
 q =$irdistfrontmiddle
 
 %Distance to box is:
+<<<<<<< HEAD
+=======
+eval ($odoy-q-k)*(-1)
+%other distances:
+eval $odoy
+eval q
+>>>>>>> c96e644b83dc4966f2079ddc9d9d226744c34d5e
 
 eval ($odoy-q-k)*(-1)
 d = ($odoy-q-k)*(-1)
@@ -52,6 +65,7 @@ followline "bm":($crossingblackline)
 fwd 0.3
 
 %Find gate - Task 3
+<<<<<<< HEAD
 followline "bm" @v 0.1 : ($irdistleft < 0.60)
 fwd 0.55
 turn 90
@@ -60,6 +74,19 @@ fwd 0.5
 drive @v 0.3 :  ($irdistfrontmiddle <=0.30)
 stop
 turn -100 @v 0.2
+=======
+n=0
+label "tjek"
+followline "bm" @v 0.1 : ($irdistleft < 0.70)
+n=n+1
+fwd 0.1
+if(n < 2) "tjek"
+fwd -0.15 @v 0.2
+turn 90
+drive @v 0.3 :  ($irdistfrontmiddle <=0.30)
+stop
+turn -90
+>>>>>>> c96e644b83dc4966f2079ddc9d9d226744c34d5e
 drive @v 0.2 : ($crossingblackline)
 fwd 0.2
 turn 90
@@ -72,15 +99,26 @@ turn 90
 fwd 0.175
 followwall "l"0.2 :($irdistleft >= 0.40)
 stop
+<<<<<<< HEAD
 fwd 0.40
 turn 90
 fwd 0.65
+=======
+fwd 0.45
+turn 90
+fwd 0.7
+>>>>>>> c96e644b83dc4966f2079ddc9d9d226744c34d5e
 turn 90
 fwd 0.4
 followwall "l"0.2 :($irdistleft >= 0.40)
 stop
+<<<<<<< HEAD
 fwd 0.3
 turn 90 @v 0.2
+=======
+fwd 0.45
+turn 90
+>>>>>>> c96e644b83dc4966f2079ddc9d9d226744c34d5e
 followline "bm" @v 0.3 :($crossingblackline)
 fwd 0.5
 turn 90
@@ -110,6 +148,10 @@ fwd 0.7
 stop
 turn 115
 ignoreobstacles
+<<<<<<< HEAD
 followline "bm"@v 0.3 :($irdistfrontmiddle <=0.25)
+=======
+followline "bm"@v 0.3 :($irdistfrontmiddle <=0.15)
+>>>>>>> c96e644b83dc4966f2079ddc9d9d226744c34d5e
 stop
 stop
