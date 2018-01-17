@@ -20,7 +20,7 @@ xlabel(ax3,'Time');
 ylabel(ax3,'Theta');
 title(ax3, 'Theta as a function of time');
 
-plot(ax4,A(:,2),A(:,3));
+plot(ax4,A(:,2),-A(:,3));
 xlabel(ax4,'X');
 ylabel(ax4,'Y');
 title(ax4, 'Y-position as a function of X');
