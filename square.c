@@ -65,7 +65,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 * odometry
 */
 
-#define IS_SIMULATION 0 //1=simulation, 0=real world
+#define IS_SIMULATION 1 //1=simulation, 0=real world
 
 #if IS_SIMULATION==1
     #define WHEEL_SEPARATION 0.267	/* m 0.252 */
@@ -107,7 +107,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 //end gateOnTheLoose Definitions
 
 //Dist to first box sntants and variables:
-#define START_POS_TO_BOX_MAX_DIST 2.5
+#define START_POS_TO_BOX_MAX_DIST 2.0
 #define LASER8VALUES 100
 int laserOld8;
 double laser8Values[LASER8VALUES];
@@ -535,17 +535,17 @@ switch (mission.state) {
 
     case ms_distanceToBox_RW:
     if(n==0){
-      if(followRightLine(1.3,0.3,mission.time)){
+      if(followRightLine(1.3,0.2,mission.time)){
 	mission.time=-1; n=1;
       }
     }
     else if(n==1){
-        if(followLineCenter(0.4,0.3,1,mission.time)){
+        if(followLineCenter(0.4,0.2,1,mission.time)){
             mission.time=-1; n=2;
         }
     }
     else if(n==2){
-      x=odo.x_pos + getDistIR(IR_dist)[2]+ LENGTH_OF_ROBOT;  // Calibrate odo sim
+      x=(odo.left_pos+odo.right_pos)/2 + getDistIR(IR_dist)[2]+ LENGTH_OF_ROBOT-0.49;  // Calibrate odo sim
       distance_Box = x-x_ref;
       mission.time=-1; n=3;
       distance_f = fopen("Distance_to_box","w");
@@ -597,12 +597,12 @@ switch (mission.state) {
       }
     }
     else if(n==1){
-        if(followLineCenter(0.5,0.3,1,mission.time)){
+        if(followLineCenter(0.8,0.3,1,mission.time)){
 	        mission.time=-1; n++;
         }
     }
     else if(n==2){
-      x=odo.x_pos + getDistIR(IR_dist)[2]+ LENGTH_OF_ROBOT;  // Calibrate odo sim
+      x=(odo.left_pos+odo.right_pos)/2 + getDistIR(IR_dist)[2]+ LENGTH_OF_ROBOT-0.49;  // Calibrate odo sim
       distance_Box = x-x_ref;
       mission.time=-1; n++;
       distance_f = fopen("Distance_to_box","w");
