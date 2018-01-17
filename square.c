@@ -65,7 +65,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 * odometry
 */
 
-#define IS_SIMULATION 0 //1=simulation, 0=real world
+#define IS_SIMULATION 1 //1=simulation, 0=real world
 
 #if IS_SIMULATION==1
     #define WHEEL_SEPARATION 0.267	/* m 0.252 */
@@ -107,8 +107,8 @@ getoutputref (const char *sym_name, symTableElement * tab)
 //end gateOnTheLoose Definitions
 
 //Dist to first box sntants and variables:
-#define START_POS_TO_BOX_MAX_DIST 2.5
-#define LASER8VALUES 100
+#define START_POS_TO_BOX_MAX_DIST 2.60
+#define LASER8VALUES 60
 int laserOld8;
 double laser8Values[LASER8VALUES];
 int drivePastBoxCounter;
@@ -267,15 +267,15 @@ enum {	ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,
 		ms_last_box_RW,ms_followWhiteLine_SIM, ms_followWhiteLine_RW,
 		ms_distanceToBox_SIM,ms_distanceToBox_RW,ms_gateOnTheLoose_SIM, 
 		ms_gateOnTheLoose_RW, ms_last_box_SIM,ms_wall_gate_RW,ms_whiteLineTest,
-		ms_DistBoxL
+		ms_DistBoxL_SIM,ms_DistBoxL_RW
 };
 
 int main()
 {
   poseTimeLog_t poseTimeLog_a[SIZE_OF_ARRAY];
   int counter = 0;
-  int running,n=0,arg,time=0,laser8sum;
-  double dist=0,angle=0;
+  int running,n=0,arg,time=0;
+  double dist=0,angle=0,laser8sum = 0;
   double x,x_ref=0,distance_Box = 0; // Variables used for "distance to box"
   FILE *distance_f;
   double IR_dist[5];
@@ -436,10 +436,10 @@ switch (mission.state) {
 	case ms_init:
 		n=0; dist=1;angle= -90.0/180*M_PI;
         if(IS_SIMULATION){
-            mission.state=ms_distanceToBox_SIM;
+            mission.state=ms_DistBoxL_SIM;
             printf("Beginning the ms %d in the sim!\n", mission.state);
         } else{
-            mission.state=ms_distanceToBox_RW;
+            mission.state=ms_DistBoxL_RW;
         }
 	break;
 
@@ -495,8 +495,8 @@ switch (mission.state) {
             printf("No data logged\n");
         }
     break;
-
-	case ms_DistBoxL:
+    
+    case ms_DistBoxL_RW:
 		if (n == 0) {
 			if(fwd(1.0,0.3,5,mission.time)){ mission.time = -1; n = 1; }
 		}
@@ -505,11 +505,53 @@ switch (mission.state) {
 		}
 		else if (n==2){
 			laser8sum = 0;
-			for (i = LASER8VALUES - 1; i >= 0; i--) {laser8sum += laser8Values[i];}
-			distance_Box = laser8sum/(LASER8VALUES);
-			distance_f = fopen("Distance_to_box", "w");
-			fprintf(distance_f, "x-distance is: %f \n", distance_Box);
-			fclose(distance_f);
+			for (i = LASER8VALUES - 1; i >= 5; i--) {laser8sum += laser8Values[i];}
+			distance_Box = laser8sum/(LASER8VALUES - 5);
+			//distance_f = fopen("Distance_to_box", "w");
+			//fprintf(distance_f, "x-distance is: %f \n", distance_Box);
+			//fclose(distance_f);
+			printf("\nLASER8VALUES = %d\n\n", LASER8VALUES);
+			printf("\nlaser8sum = %f\n\n", laser8sum);
+			printf("\ndistance = %f\n\n", distance_Box);
+			mission.time = -1; n = 3;
+		}
+		else if (n == 3) {
+			if (followLeftLine(2.0, 0.3, mission.time))	 { mission.time = -1; n = 4; }
+		}
+		else if (n == 4) {
+			if (followLineCenter(1.0, 0.3, 0, mission.time)) { mission.time = -1; n = 5; }
+		}
+		else if (n == 5) {
+			if (turn(-45.0 / 180.0*M_PI,0.3, mission.time))	 { mission.time = -1; n = 6; }
+		}
+		else if (n == 6) {
+			if (followLineCenter(0.5, 0.3, 0, mission.time)) { mission.time = -1; n = 7; }
+		}
+		else if (n == 7) {
+			if (followLineCenter(0.5, 0.3, 1, mission.time)) { mission.time = -1; n = 8; }
+		}
+		else if (n == 8) {
+			mission.time = -1; n = 0;
+			mission.state = ms_PushNDrive_RW;
+		}
+		printf("laserpar[8] = %f\n",laserpar[8]);
+		break;
+    
+    case ms_DistBoxL_SIM:
+		if (n == 0) {
+			if(fwd(1.0,0.3,5,mission.time)){ mission.time = -1; n = 1; }
+		}
+		else if (n == 1) {
+			if (fwd(0.4, -0.3, 0, mission.time)) { mission.time = -1; n = 2; }
+		}
+		else if (n==2){
+			laser8sum = 0;
+			for (i = LASER8VALUES - 1; i >= 5; i--) {laser8sum += laser8Values[i];}
+			distance_Box = laser8sum/(LASER8VALUES - 5);
+			//fprintf(distance_f, "x-distance is: %f \n", distance_Box);
+			//fclose(distance_f);
+			printf("\nLASER8VALUES = %d\n\n", LASER8VALUES);
+			printf("\nlaser8sum = %f\n\n", laser8sum);
 			printf("\ndistance = %f\n\n", distance_Box);
 			mission.time = -1; n = 3;
 		}
@@ -520,18 +562,25 @@ switch (mission.state) {
 			if (followLineCenter(1.0, 0.3, 0, mission.time)) { mission.time = -1; n = 5; }
 		}
 		else if (n == 5) {
-			if (turn(-45.0 / 180.0*M_PI,0.3, mission.time))		 { mission.time = -1; n = 6; }
+		    if (fwd(0.25, 0.3, 0, mission.time)) { mission.time = -1; n = 6; }
 		}
 		else if (n == 6) {
-			if (followLineCenter(0.5, 0.3, 0, mission.time)) { mission.time = -1; n = 7; }
+			if (turn(-90.0 / 180.0*M_PI,0.3, mission.time))		 { mission.time = -1; n = 7; }
 		}
 		else if (n == 7) {
-			if (followLineCenter(0.5, 0.3, 1, mission.time)) { mission.time = -1; n = 8; }
+		    if (fwd(0.35, 0.3, 0, mission.time)) { mission.time = -1; n = 8; }
 		}
 		else if (n == 8) {
-			mission.time = ms_PushNDrive_RW;
+			if (followLineCenter(0.3, 0.3, 1, mission.time)) { mission.time = -1; n = 9; }
 		}
+		else if (n == 9) {
+		    mission.time = -1; n = 0;
+			mission.state = ms_PushNDrive_SIM;
+		}
+		printf("laserpar[8] = %f\n",laserpar[8]);
 		break;
+    
+	
 
     case ms_distanceToBox_RW:
     if(n==0){
