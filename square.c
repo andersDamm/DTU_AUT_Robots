@@ -65,7 +65,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 * odometry
 */
 
-#define IS_SIMULATION 1 //1=simulation, 0=real world
+#define IS_SIMULATION 0 //1=simulation, 0=real world
 
 #if IS_SIMULATION==1
     #define WHEEL_SEPARATION 0.267	/* m 0.252 */
@@ -96,7 +96,6 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define OBSTACLE_DIST 0.20
 #define CRITICAL_BLACK_VALUE 0.8
 #define CRITICAL_FLOOR_VALUE 0.2
-#define IS_SIMULATION 1 //1=simulation, 0=real world
 #define CRIT_NR_BLACK_LINE 6
 #define DONT_CARE 0
 
@@ -1064,24 +1063,28 @@ switch (mission.state) {
 		}
 	}
 	else if(n==5){ //Drive till beside box
+	printf("5, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
 		if(fwd(0.40,0.2,0,mission.time)){
 			mission.time = -1;
 			n++;
 		}
 	}
 	else if(n==6){
-		if(turn(-180.0/180*M_PI, 0.5,mission.time)){
+	printf("6, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
+		if(turn(-179.0/180*M_PI, 0.3,mission.time)){
 			mission.time = -1;
 			n++;
 		}
 	}
 	else if(n==7){
+	printf("7, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
 		if(fwd(0.5,0.2,0,mission.time)){
 			mission.time = -1;
 			n++;
 		}
 	}
 	else if(n==8){
+	printf("8, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
 		if(turn(90.0*M_PI/180, 0.2,mission.time)){
 			mission.time = -1;
 			n++;
@@ -1156,7 +1159,7 @@ case ms_last_box_SIM:
 		}
 	}
 	else if(n==6){
-		if(turn(-180.0*M_PI/180, 0.3,mission.time)){
+		if(turn(-180.0*M_PI/180.0, 0.3,mission.time)){
 			mission.time = -1;
 			n++;
 		}
@@ -1168,7 +1171,7 @@ case ms_last_box_SIM:
 		}
 	}
 	else if(n==8){
-		if(turn(90*M_PI/180, 0.2,mission.time)){
+		if(turn(90.0*M_PI/180, 0.2,mission.time)){
 			mission.time = -1;
 			n++;
 		}
@@ -1186,7 +1189,7 @@ case ms_last_box_SIM:
 		}
 	}
 	else if(n==11){
-		if(turn(90*M_PI/180, 0.2,mission.time)){
+		if(turn(90.0*M_PI/180, 0.2,mission.time)){
 			mission.time = -1;
 			n++;
 		}
@@ -1268,8 +1271,9 @@ void update_odo(odotype *p)
 	else if (delta_r < -0x8000) delta_r += 0x10000;
 	p->right_enc_old = p->right_enc;
 	p->right_pos += delta_r * p->cr;
-
+	//printf("delta_l = %d ",delta_l);
 	delta_l = p->left_enc - p->left_enc_old;
+	
 	if (delta_l > 0x8000) delta_l -= 0x10000;
 	else if (delta_l < -0x8000) delta_l += 0x10000;
 	p->left_enc_old = p->left_enc;
@@ -1277,6 +1281,7 @@ void update_odo(odotype *p)
 
 	delta_u = ((double)delta_r * p->cr + (double)delta_l * p->cl)/2;
 	delta_theta = ((double)delta_r * p->cr - (double)delta_l * p->cl)/(double)p->w;
+	//printf("delta_theta = %f\t delta_r = %d, delta_l = %d\n",delta_theta,delta_r,delta_l);
 	p->theta += delta_theta;
 	p->x_pos += delta_u*cos(p->theta);
 	p->y_pos -= delta_u*sin(p->theta);
