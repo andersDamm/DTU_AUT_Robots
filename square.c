@@ -259,7 +259,7 @@ enum {	ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,
 		ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end,ms_wall_gate_SIM,
 		ms_last_box_RW,ms_followWhiteLine,ms_distanceToBox,
 		ms_gateOnTheLoose_SIM, ms_gateOnTheLoose_RW, ms_last_box_SIM,
-		ms_wall_gate_RW,ms_LDistBox
+		ms_wall_gate_RW,ms_DistBoxL
 };
 
 int main()
@@ -486,42 +486,40 @@ switch (mission.state) {
         }
     break;
 
-	case ms_LDistBox:
+	case ms_DistBoxL:
 		if (n == 0) {
 			if(fwd(1.0,0.3,5,mission.time)){ mission.time = -1; n = 1; }
 		}
-		else if (n==1){
+		else if (n == 1) {
+			if (fwd(0.4, -0.3, 0, mission.time)) { mission.time = -1; n = 2 }
+		}
+		else if (n==2){
 			laser8sum = 0;
-			for (i = LASER8VALUES - 1; i >= 0; i--) {
-				laser8sum += laser8Values[i];
-			}
+			for (i = LASER8VALUES - 1; i >= 0; i--) {laser8sum += laser8Values[i];}
 			distance_Box = laser8sum/(LASER8VALUES);
 			distance_f = fopen("Distance_to_box", "w");
 			fprintf(distance_f, "x-distance is: %f \n", distance_Box);
 			fclose(distance_f);
 			printf("\ndistance = %f\n\n", distance_Box);
-			mission.time = -1; n = 2;
-		}
-		else if (n == 2) {
-			if(turn(-90.0/180.0*M_PI,0.3,mission.time)){ mission.time = -1; n = 3;}
+			mission.time = -1; n = 3;
 		}
 		else if (n == 3) {
-			if (followLeftLine(2.0, 0.3, mission.time)) { mission.time = -1; n = 4; }
+			if (followLeftLine(2.0, 0.3, mission.time))		 { mission.time = -1; n = 4; }
 		}
 		else if (n == 4) {
 			if (followLineCenter(1.0, 0.3, 0, mission.time)) { mission.time = -1; n = 5; }
 		}
 		else if (n == 5) {
-			if (turn(-45.0 / 180.0*M_PI, mission.time)) { mission.time = -1; n = 6; }
+			if (turn(-45.0 / 180.0*M_PI, mission.time))		 { mission.time = -1; n = 6; }
 		}
 		else if (n == 6) {
-			if (followLineCenter(0.5, 0.3, 0, mission.time)) { mission.time = -1; n = 7 }
+			if (followLineCenter(0.5, 0.3, 0, mission.time)) { mission.time = -1; n = 7; }
 		}
 		else if (n == 7) {
-			if (followLineCenter(0.5, 0.3, 1, mission.time)) { mission.time = -1; n=8 }
+			if (followLineCenter(0.5, 0.3, 1, mission.time)) { mission.time = -1; n = 8; }
 		}
 		else if (n == 8) {
-			mission.time = ms_end;
+			mission.time = ms_PushNDrive_RW;
 		}
 		break;
 
@@ -1344,7 +1342,6 @@ void update_motcon(motiontype *p){
 
 		case mot_reverse:
 			d=((p->motorspeed_l+p->motorspeed_r)/2)*((p->motorspeed_l+p->motorspeed_r)/2)/(2*(AJAX));
-
 		 	if ((p->right_pos+p->left_pos)/2- p->startpos <= -(p->dist)){
 				p->finished=1;
 				p->motorspeed_l=0;
