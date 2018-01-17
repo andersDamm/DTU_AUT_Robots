@@ -98,6 +98,16 @@ getoutputref (const char *sym_name, symTableElement * tab)
 #define LASERSCANNER_ZONES 9
 #define DESIRED_DIST_TO_FRONT_OBJECT 5
 //end gateOnTheLoose Definitions
+
+//Dist to first box sntants and variables:
+#define START_POS_TO_BOX_MAX_DIST 2.5
+#define LASER8VALUES 100
+int laserOld8;
+double laser8Values[LASER8VALUES];
+int drivePastBoxCounter;
+double meanLaser8;
+//end, Dist to first box sntants and variables:
+
 /* 	DB_STOPCOND
 * 	fwd: 				0=stop by dist	1=stop by wall detection	
 *						2=stop by line black line detection		3=stop by right IR sensor
@@ -248,19 +258,20 @@ enum {	ms_init,ms_fwd,ms_turn,ms_turnr,ms_followLineCenter,
 		ms_followRightLine,ms_followLeftLine,ms_follow_wall,
 		ms_PushNDrive_SIM, ms_PushNDrive_RW,ms_end,ms_wall_gate_SIM,
 		ms_last_box_RW,ms_followWhiteLine,ms_distanceToBox,
-		ms_gateOnTheLoose_SIM, ms_gateOnTheLoose_RW, ms_last_box_SIM,ms_wall_gate_RW
+		ms_gateOnTheLoose_SIM, ms_gateOnTheLoose_RW, ms_last_box_SIM,
+		ms_wall_gate_RW,ms_LDistBox
 };
 
 int main()
 {
   poseTimeLog_t poseTimeLog_a[SIZE_OF_ARRAY];
   int counter = 0;
-  int running,n=0,arg,time=0;
+  int running,n=0,arg,time=0,laser8sum;
   double dist=0,angle=0;
   double x,x_ref=0,distance_Box = 0; // Variables used for "distance to box"
   FILE *distance_f;
   double IR_dist[5];
-
+  
   /* Establish connection to robot sensors and actuators.
   */
   if (rhdConnect('w',"localhost",ROBOTPORT)!='w'){
@@ -474,6 +485,45 @@ switch (mission.state) {
             printf("No data logged\n");
         }
     break;
+
+	case ms_LDistBox:
+		if (n == 0) {
+			if(fwd(1.0,0.3,5,mission.time)){ mission.time = -1; n = 1; }
+		}
+		else if (n==1){
+			laser8sum = 0;
+			for (i = LASER8VALUES - 1; i >= 0; i--) {
+				laser8sum += laser8Values[i];
+			}
+			distance_Box = laser8sum/(LASER8VALUES);
+			distance_f = fopen("Distance_to_box", "w");
+			fprintf(distance_f, "x-distance is: %f \n", distance_Box);
+			fclose(distance_f);
+			printf("\ndistance = %f\n\n", distance_Box);
+			mission.time = -1; n = 2;
+		}
+		else if (n == 2) {
+			if(turn(-90.0/180.0*M_PI,0.3,mission.time)){ mission.time = -1; n = 3;}
+		}
+		else if (n == 3) {
+			if (followLeftLine(2.0, 0.3, mission.time)) { mission.time = -1; n = 4; }
+		}
+		else if (n == 4) {
+			if (followLineCenter(1.0, 0.3, 0, mission.time)) { mission.time = -1; n = 5; }
+		}
+		else if (n == 5) {
+			if (turn(-45.0 / 180.0*M_PI, mission.time)) { mission.time = -1; n = 6; }
+		}
+		else if (n == 6) {
+			if (followLineCenter(0.5, 0.3, 0, mission.time)) { mission.time = -1; n = 7 }
+		}
+		else if (n == 7) {
+			if (followLineCenter(0.5, 0.3, 1, mission.time)) { mission.time = -1; n=8 }
+		}
+		else if (n == 8) {
+			mission.time = ms_end;
+		}
+		break;
 
   case ms_distanceToBox:
     if(n==0){
@@ -1130,6 +1180,12 @@ void update_motcon(motiontype *p){
 				p->curcmd=mot_stop;
 			break;
 
+			case mot_drivePastBox:
+				p->curcmd = p->mot_drivePastBox;
+				break;
+
+
+
 			case mot_move:
 			    p->startpos=(p->left_pos+p->right_pos)/2;
 			    if(p->speedcmd < 0){
@@ -1206,6 +1262,35 @@ void update_motcon(motiontype *p){
 			p->motorspeed_l=0;
 			p->motorspeed_r=0;
 		break;
+		
+		case mot_drivePastBox:
+			d = ((p->motorspeed_l + p->motorspeed_r) / 2)*((p->motorspeed_l + p->motorspeed_r) / 2) / (2 * (AJAX));
+			if (laserpar[8] > START_POS_TO_BOX_MAX_DIST && laserOld8 < START_POS_TO_BOX_MAX_DIST && laserOld8 != 0) {//Hits outer edge of box
+				p->finished = 1;
+				p->motorspeed_l = 0;
+				p->motorspeed_r = 0;
+				laserOld8 = 0;
+			}
+			else if(laserpar[8] < START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 > START_POS_TO_BOX_MAX_DIST)//Hits first edge of box
+			{
+				p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				if (drivePastBoxCounter == LASER8VALUES - 1) drivePastBoxCounter = 0;
+			}
+			else if (laserpar[8] > START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 > START_POS_TO_BOX_MAX_DIST) {//Both are before the edge
+				p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+			}
+			else if () {//at the box.
+				p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				if (drivePastBoxCounter == LASER8VALUES - 1) drivePastBoxCounter = 0;
+				laser8Values[drivePastBoxCounter] = laserpar[8];
+				drivePastBoxCounter++;
+			}
+			laserOld8 = laserpar[8];
+			break;
+
 
 		//stop_condition: 0=stop by dist, 1=stop by wall detection, 2=stop by line black line detection
 		case mot_move:
@@ -1259,6 +1344,31 @@ void update_motcon(motiontype *p){
 			else if(p->stop_condition==4 && (laserpar[8] < p->dist || (laserpar[8] == 0.0))){
 				p->motorspeed_l=p->speedcmd;
 				p->motorspeed_r=p->speedcmd;
+			}
+			else if (p->stop_condition == 5) {
+				if (laserpar[8] > START_POS_TO_BOX_MAX_DIST && laserOld8 < START_POS_TO_BOX_MAX_DIST && laserOld8 != 0) {//Hits outer edge of box
+					p->finished = 1;
+					p->motorspeed_l = 0;
+					p->motorspeed_r = 0;
+					laserOld8 = 0;
+				}
+				else if (laserpar[8] < START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 > START_POS_TO_BOX_MAX_DIST)//Hits first edge of box
+				{
+					p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				}
+				else if (laserpar[8] > START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 > START_POS_TO_BOX_MAX_DIST) {//Both are before the edge
+					p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				}
+				else if (laserpar[8] < START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 < START_POS_TO_BOX_MAX_DIST && laserOld8 != 0) {//at the box.
+					p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					if (drivePastBoxCounter == LASER8VALUES - 1) drivePastBoxCounter = 0;
+					laser8Values[drivePastBoxCounter] = laserpar[8];
+					drivePastBoxCounter++;
+				}
+				laserOld8 = laserpar[8];
 			}
 			else{
 				p->finished=1;
@@ -1614,6 +1724,12 @@ int fwd(double dist, double speed, int condition,int time){
 	}
 	else
 		return mot.finished;
+}
+int drivePastBox(double speed, int time) {
+	if (time == 0) {
+		mot.cmd = mot_drivePastBox;
+
+	}
 }
 int turn(double angle, double speed,int time){
  	if (time==0){
