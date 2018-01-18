@@ -1,4 +1,6 @@
+%18-01-2018
 %Distance measurement - Task 1
+
 k=0.2 %Shitty hack
 ignoreobstacles
 %followline "br"@v 0.3 :($drivendist > 1)
@@ -46,11 +48,11 @@ fwd 0.3
 %Find gate - Task 3
 n=0
 label "tjek"
-followline "bm" @v 0.1 : ($irdistleft < 0.70)
+followline "bm" @v 0.1 : ($irdistleft < 1)
 n=n+1
 fwd 0.1
 if(n < 2) "tjek"
-fwd -0.275 @v 0.2
+fwd -0.1 @v 0.2
 turn 90
 drive @v 0.3 :  ($irdistfrontmiddle <=0.30)
 stop
@@ -67,7 +69,7 @@ turn 90
 fwd 0.175
 followwall "l"0.15 :($irdistleft >= 0.40)
 stop
-fwd 0.45
+fwd 0.40
 turn 90
 fwd 0.7
 turn 90

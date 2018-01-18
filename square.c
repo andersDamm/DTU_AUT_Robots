@@ -535,7 +535,7 @@ switch (mission.state) {
 			mission.time = -1; n = 0;
 			mission.state = ms_PushNDrive_RW;
 		}
-		printf("laserpar[8] = %f\n",laserpar[8]);
+		//printf("laserpar[8] = %f\n",laserpar[8]);
 		break;
     
     case ms_DistBoxL_SIM:
@@ -546,8 +546,9 @@ switch (mission.state) {
 			laser8sum = 0;
 			for (i = LASER8VALUES - 1; i >= 10; i--) { laser8sum += laser8Values[i]; }
 			distance_Box = laser8sum / (LASER8VALUES - 10);
-			printf("\nLASER8VALUES = %d\n\n", LASER8VALUES);
-			printf("\nlaser8sum = %f\n\n", laser8sum);
+			//printf("\nLASER8VALUES = %d\n\n", LASER8VALUES);
+			//printf("\nlaser8sum = %f\n\n", laser8sum);
+			distance_Box = (distance_Box+0.04);
 			printf("\ndistance = %f\n\n", distance_Box);
 			mission.time = -1; n = 2;
 		}
@@ -576,7 +577,7 @@ switch (mission.state) {
 		    mission.time = -1; n = 0;
 			mission.state = ms_PushNDrive_SIM;
 		}
-		printf("laserpar[8] = %f\n",laserpar[8]);
+		//printf("laserpar[8] = %f\n",laserpar[8]);
 		break;
     
 	
