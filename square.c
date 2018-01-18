@@ -540,21 +540,19 @@ switch (mission.state) {
     
     case ms_DistBoxL_SIM:
 		if (n == 0) {
-			if(fwd(1.0,0.3,5,mission.time)){ mission.time = -1; n = 1; }
+			if(fwd(0.52,0.3,6,mission.time)){ mission.time = -1; n = 1; }
 		}
 		else if (n == 1) {
-			if (fwd(0.4, -0.3, 0, mission.time)) { mission.time = -1; n = 2; }
-		}
-		else if (n==2){
 			laser8sum = 0;
-			for (i = LASER8VALUES - 1; i >= 5; i--) {laser8sum += laser8Values[i];}
-			distance_Box = laser8sum/(LASER8VALUES - 5);
-			//fprintf(distance_f, "x-distance is: %f \n", distance_Box);
-			//fclose(distance_f);
+			for (i = LASER8VALUES - 1; i >= 10; i--) { laser8sum += laser8Values[i]; }
+			distance_Box = laser8sum / (LASER8VALUES - 10);
 			printf("\nLASER8VALUES = %d\n\n", LASER8VALUES);
 			printf("\nlaser8sum = %f\n\n", laser8sum);
 			printf("\ndistance = %f\n\n", distance_Box);
-			mission.time = -1; n = 3;
+			mission.time = -1; n = 2;
+		}
+		else if (n == 2) {
+			if (fwd(0.52, -0.3, 0, mission.time)) { mission.time = -1; n = 3; }
 		}
 		else if (n == 3) {
 			if (followLeftLine(2.0, 0.3, mission.time))		 { mission.time = -1; n = 4; }
@@ -1507,6 +1505,28 @@ void update_motcon(motiontype *p){
 				}
 				laserOld8 = laserpar[8];
 				printf("laserpar8 = %f\n", laserpar[8]);
+			}
+			else if (p->stop_condition == 6) {
+				if ((p->right_pos + p->left_pos) / 2 - p->startpos >= p->dist) {
+					p->finished = 1;
+					p->motorspeed_l = 0;
+					p->motorspeed_r = 0;
+				}
+				else if ((p->right_pos + p->left_pos) / 2 - p->startpos > p->dist - d) { 	// Deacceleration
+					p->motorspeed_l -= AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r -= AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				}
+				else if (p->motorspeed_l<p->speedcmd) {                           			// Acceleration
+					p->motorspeed_l += AJAX*CONVERSION_FACTOR_ACC - K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r += AJAX*CONVERSION_FACTOR_ACC + K_FOR_ACCELERATING_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				}
+				else {
+					p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+					p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
+				}
+				if (drivePastBoxCounter == LASER8VALUES - 1) { drivePastBoxCounter = 0; }
+				laser8Values[drivePastBoxCounter] = laserpar[8];
+				drivePastBoxCounter++;
 			}
 			else{
 				p->finished=1;
