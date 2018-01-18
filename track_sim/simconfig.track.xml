@@ -1,0 +1,55 @@
+<?xml version="1.0" ?>
+<!--
+    Configuration file for 
+    Simulator Server
+-->
+
+<simserver>
+  <!-- *** Core Components Configuration *** -->
+  <!-- Sheduler configuration -->
+  <scheduler>
+    <period value="10000"/><!--in usec-->
+  </scheduler>
+  
+  <!-- Simulator configuration -->
+  <simstage>
+    <world file="track.world"/>
+  </simstage>
+  
+  <!-- Robot server no. 0 -->
+  <robot>
+    <mrcserver port="24902"/>
+    <clients number="5"/>
+    <params name="smr0" wheelbase="0.26" encresolution="0.00010245"/>
+    <irsensor ka="14.5" kb="74.0"/>
+    <laserscanner port="19001"/>
+  </robot>
+  
+  <!-- Robot server no. 1 
+  <robot>
+    <mrcserver port="8001"/>
+    <clients number="5"/>
+    <params name="smr1" wheelbase="0.26" encresolution="0.00010245"/>
+    <irsensor ka="15.0" kb="0.0"/>
+    <laserscanner port="19001"/>
+  </robot>
+  -->
+  <!-- Robot server no. 2 
+  <robot>
+    <mrcserver port="8002"/>
+    <clients number="4"/>
+    <params name="smr2" wheelbase="0.26" encresolution="0.00010245"/>
+    <irsensor ka="15.0" kb="0.0"/>
+    <laserscanner port="19002"/>
+  </robot>
+ -->
+  <!-- Robot server no. 3 
+  <robot>
+    <mrcserver port="8003"/>
+    <clients number="5"/>
+    <params name="smr3" wheelbase="0.26" encresolution="0.00010245"/>
+    <irsensor ka="15.0" kb="0.0"/>
+    <laserscanner port="19003"/>
+  </robot>
+  -->
+</simserver>
