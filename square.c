@@ -65,7 +65,7 @@ getoutputref (const char *sym_name, symTableElement * tab)
 * odometry
 */
 
-#define IS_SIMULATION 1 //1=simulation, 0=real world
+#define IS_SIMULATION 0 //1=simulation, 0=real world
 
 #if IS_SIMULATION==1
     #define WHEEL_SEPARATION 0.267	/* m 0.252 */
