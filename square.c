@@ -546,7 +546,7 @@ switch (mission.state) {
     }
     else if(n==2){
       x=(odo.left_pos+odo.right_pos)/2 + getDistIR(IR_dist)[2]+ LENGTH_OF_ROBOT-0.49;  // Calibrate odo sim
-      distance_Box = x-x_ref;
+      distance_Box = x-x_ref-0.22;
       mission.time=-1; n=3;
       distance_f = fopen("Distance_to_box","w");
       fprintf(distance_f,"x-distance is: %f \n",distance_Box);
