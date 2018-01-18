@@ -107,11 +107,11 @@ getoutputref (const char *sym_name, symTableElement * tab)
 //end gateOnTheLoose Definitions
 
 //Dist to first box sntants and variables:
-#define START_POS_TO_BOX_MAX_DIST 2.60
 #define LASER8VALUES 60
+#define START_POS_TO_BOX_MAX_DIST 2.60
 int laserOld8;
 double laser8Values[LASER8VALUES];
-int drivePastBoxCounter;
+int drivePastBoxCounter = 0;
 double meanLaser8;
 //end, Dist to first box sntants and variables:
 
@@ -477,7 +477,7 @@ switch (mission.state) {
 
     case ms_followRightLine:
         if (followRightLine(2,0.3,mission.time)) mission.state = ms_followLineCenter;
-    break;
+    break; 
 
 	case ms_followLeftLine:
 		if (followLeftLine(2,0.3,mission.time)) mission.state = ms_end;
@@ -528,7 +528,8 @@ switch (mission.state) {
 			if (followLineCenter(0.5, 0.3, 0, mission.time)) { mission.time = -1; n = 7; }
 		}
 		else if (n == 7) {
-			if (followLineCenter(0.5, 0.3, 1, mission.time)) { mission.time = -1; n = 8; }
+		    mission.time = -1; n = 0;
+			mission.state = ms_PushNDrive_RW;
 		}
 		else if (n == 8) {
 			mission.time = -1; n = 0;
@@ -1500,11 +1501,12 @@ void update_motcon(motiontype *p){
 				else if (laserpar[8] < START_POS_TO_BOX_MAX_DIST && laserpar[8] != 0 && laserOld8 < START_POS_TO_BOX_MAX_DIST && laserOld8 != 0) {//at the box.
 					p->motorspeed_l = p->speedcmd - K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
 					p->motorspeed_r = p->speedcmd + K_FOR_STRAIGHT_DIRECTION_CONTROL*(odo.theta_ref - odo.theta);
-					if (drivePastBoxCounter == LASER8VALUES - 1) drivePastBoxCounter = 0;
+					if (drivePastBoxCounter == LASER8VALUES - 1) {drivePastBoxCounter = 0;}
 					laser8Values[drivePastBoxCounter] = laserpar[8];
 					drivePastBoxCounter++;
 				}
 				laserOld8 = laserpar[8];
+				printf("laserpar8 = %f\n", laserpar[8]);
 			}
 			else{
 				p->finished=1;
