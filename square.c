@@ -592,12 +592,12 @@ switch (mission.state) {
     
     case ms_distanceToBox_SIM:
     if(n==0){
-      if(followRightLine(1.2,0.3,mission.time)){
+      if(followRightLine(1,0.3,mission.time)){
 	mission.time=-1; n++;
       }
     }
     else if(n==1){
-        if(followLineCenter(0.8,0.3,1,mission.time)){
+        if(followLineCenter(0.5,0.3,1,mission.time)){
 	        mission.time=-1; n++;
         }
     }
@@ -723,7 +723,7 @@ switch (mission.state) {
 
   case ms_PushNDrive_SIM:        // Push box and gate
 		if(n==0){ // Cond: 0 for stopline, 1 for dist, 2 for object in front
-		    printf("Min IR dist = %f\n",minDistFrontIR());
+//		    printf("Min IR dist = %f\n",minDistFrontIR());
 	  		if(followLineCenter(0.2, 0.3, 2, mission.time)){
 				mission.time=-1; n=1;
 	  		}
@@ -1063,28 +1063,28 @@ switch (mission.state) {
 		}
 	}
 	else if(n==5){ //Drive till beside box
-	printf("5, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
+//	printf("5, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
 		if(fwd(0.40,0.2,0,mission.time)){
 			mission.time = -1;
 			n++;
 		}
 	}
 	else if(n==6){
-	printf("6, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
+//	printf("6, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
 		if(turn(-179.0/180*M_PI, 0.3,mission.time)){
 			mission.time = -1;
 			n++;
 		}
 	}
 	else if(n==7){
-	printf("7, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
+//	printf("7, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
 		if(fwd(0.5,0.2,0,mission.time)){
 			mission.time = -1;
 			n++;
 		}
 	}
 	else if(n==8){
-	printf("8, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
+//	printf("8, th %f\t the_r: %f\n", odo.theta, odo.theta_ref);
 		if(turn(90.0*M_PI/180, 0.2,mission.time)){
 			mission.time = -1;
 			n++;
@@ -1227,7 +1227,7 @@ case ms_last_box_SIM:
    speedr->updated=1;
 
    if (time  % 100 ==0)
-		printf("n = %d \n", n);
+//		printf("n = %d \n", n);
 	time++;
 /* stop if keyboard is activated
 *
