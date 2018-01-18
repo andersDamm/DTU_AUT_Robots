@@ -592,12 +592,12 @@ switch (mission.state) {
     
     case ms_distanceToBox_SIM:
     if(n==0){
-      if(followRightLine(1.2,0.3,mission.time)){
+      if(followRightLine(1,0.3,mission.time)){
 	mission.time=-1; n++;
       }
     }
     else if(n==1){
-        if(followLineCenter(0.8,0.3,1,mission.time)){
+        if(followLineCenter(0.5,0.3,1,mission.time)){
 	        mission.time=-1; n++;
         }
     }
