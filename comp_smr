@@ -10,8 +10,8 @@ q =$irdistfrontmiddle
 %Distance to box is:
 eval ($odoy-q-k)*(-1)
 %other distances:
-eval $odoy
-eval q
+%eval $odoy
+%eval q
 %Box gate - Task 2
 turn 90
 drive @v 0.3 :($crossingblackline)
@@ -37,7 +37,7 @@ followline "bm"@v0.3 :($crossingblackline)
 stop
 fwd 0.175
 turn 90
-stop 
+stop
 followline "bm":($crossingblackline)
 fwd 0.1 @v 0.3
 followline "bm":($crossingblackline)
